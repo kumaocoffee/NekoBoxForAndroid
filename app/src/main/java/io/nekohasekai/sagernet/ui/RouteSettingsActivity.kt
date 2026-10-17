@@ -226,8 +226,10 @@ class RouteSettingsActivity(
             val editingId = intent.getLongExtra(EXTRA_ROUTE_ID, 0L)
             DataStore.editingId = editingId
             runOnDefaultDispatcher {
+                val titleText: String
                 if (editingId == 0L) {
                     init(intent.getStringExtra(EXTRA_PACKAGE_NAME))
+                    titleText = getString(R.string.route_add)
                 } else {
                     val ruleEntity = SagerDatabase.rulesDao.getById(editingId)
                     if (ruleEntity == null) {
@@ -237,9 +239,11 @@ class RouteSettingsActivity(
                         return@runOnDefaultDispatcher
                     }
                     ruleEntity.init()
+                    titleText = ruleEntity.displayName()
                 }
 
                 onMainDispatcher {
+                    supportActionBar?.title = titleText
                     supportFragmentManager.beginTransaction()
                         .replace(R.id.settings, MyPreferenceFragmentCompat())
                         .commit()

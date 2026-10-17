@@ -610,4 +610,25 @@
     <string name="connection_disconnected">Connection closed</string>
     <string name="connection_add_rule">Add routing rule for target</string>
     <string name="connection_filter_hint">Search domain, IP or rule…</string>
+
+    <!-- Route UI/UX Optimization Strings -->
+    <string name="route_domain">Domain</string>
+    <string name="route_ip">Target IP</string>
+    <string name="route_port">Target Port</string>
+    <string name="route_source">Source IP (Advanced)</string>
+    <string name="route_source_port">Source Port (Advanced)</string>
+    <string name="route_network">Transport Network</string>
+    <string name="route_protocol">Sniffed Protocol (Advanced)</string>
+    <string name="route_outbound_title">Routing Action</string>
+    <string name="route_apps">Assigned Apps</string>
+    <string name="route_advanced_category">Advanced Network &amp; Protocol Options</string>
+    <string name="route_common_category">Matching Criteria</string>
+    <string name="route_basic_category">Basic Configuration</string>
+    <string name="route_help">Route Documentation</string>
+    <string name="filter_all">All (%d)</string>
+    <string name="filter_proxy">Proxy (%d)</string>
+    <string name="filter_bypass">Direct (%d)</string>
+    <string name="filter_block">Block (%d)</string>
+    <string name="route_drag_disabled_hint">Switch to \"All\" to reorder rules</string>
+    <string name="route_edit">Edit Route</string>
 </resources>

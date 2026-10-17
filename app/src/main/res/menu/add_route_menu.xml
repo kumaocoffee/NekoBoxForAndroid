@@ -14,5 +14,9 @@
         android:id="@+id/action_manage_assets"
         android:title="@string/route_manage_assets"
         app:showAsAction="never" />
+    <item
+        android:id="@+id/action_route_help"
+        android:title="@string/route_help"
+        app:showAsAction="never" />
 
 </menu>

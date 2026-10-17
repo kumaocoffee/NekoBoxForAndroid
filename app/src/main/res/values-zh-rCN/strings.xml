@@ -530,4 +530,25 @@
     <string name="connection_disconnected">连接已断开</string>
     <string name="connection_add_rule">为此目标新建分流规则</string>
     <string name="connection_filter_hint">搜索域名、IP 或规则…</string>
+
+    <!-- Route UI/UX Optimization Strings -->
+    <string name="route_domain">匹配域名</string>
+    <string name="route_ip">目标 IP 地址</string>
+    <string name="route_port">目标端口</string>
+    <string name="route_source">来源 IP (高级)</string>
+    <string name="route_source_port">来源端口 (高级)</string>
+    <string name="route_network">传输协议类型</string>
+    <string name="route_protocol">应用层协议探测 (高级)</string>
+    <string name="route_outbound_title">分流处理动作</string>
+    <string name="route_apps">生效的手机应用</string>
+    <string name="route_advanced_category">高级网络栈与底层选项</string>
+    <string name="route_common_category">常用分流匹配条件</string>
+    <string name="route_basic_category">基本信息与动作</string>
+    <string name="route_help">路由规则使用说明</string>
+    <string name="filter_all">全部 (%d)</string>
+    <string name="filter_proxy">走代理 (%d)</string>
+    <string name="filter_bypass">本地直连 (%d)</string>
+    <string name="filter_block">拦截屏蔽 (%d)</string>
+    <string name="route_drag_disabled_hint">请切换到「全部」标签后再拖拽排序</string>
+    <string name="route_edit">编辑路由规则</string>
 </resources>

@@ -1,138 +1,247 @@
-<?xml version="1.0" encoding="utf-8"?><!-- Based on: https://github.com/android/platform_frameworks_base/blob/505e3ab/core/res/res/layout/simple_list_item_2.xml -->
+<?xml version="1.0" encoding="utf-8"?>
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/content"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="4dp"
+    android:layout_marginStart="8dp"
+    android:layout_marginEnd="8dp"
+    android:layout_marginTop="4dp"
+    android:layout_marginBottom="4dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?attr/selectableItemBackground"
+    app:cardCornerRadius="12dp"
     app:cardElevation="2dp">
 
     <LinearLayout
         android:id="@+id/content_lin"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:focusable="true"
         android:orientation="vertical">
 
-
+        <!-- Header Row: Index, Title, Action Badge, Switch, Drag Handle -->
         <LinearLayout
             android:id="@+id/container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="12dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="4dp">
 
-            <LinearLayout
+            <!-- Order Index Badge -->
+            <TextView
+                android:id="@+id/order_badge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_order_badge"
+                android:paddingStart="6dp"
+                android:paddingTop="2dp"
+                android:paddingEnd="6dp"
+                android:paddingBottom="2dp"
+                android:textColor="?attr/accentOrTextSecondary"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                tools:text="#1" />
+
+            <!-- Rule Name -->
+            <TextView
+                android:id="@+id/profile_name"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_vertical"
+                android:layout_marginStart="8dp"
                 android:layout_weight="1"
-                android:gravity="center_vertical"
-                android:paddingStart="12dp"
-                android:paddingTop="8dp"
-                android:paddingBottom="8dp">
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textAppearance="?android:attr/textAppearanceMedium"
+                android:textColor="?android:attr/textColorPrimary"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                tools:text="📹 油管与谷歌生态" />
 
-                <TextView
-                    android:id="@+id/profile_name"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textAppearance="?android:attr/textAppearanceSmall"
-                    android:textColor="?android:attr/textColorPrimary"
-                    android:textStyle="bold"
-                    tools:text="@string/profile_name" />
-            </LinearLayout>
-
-
-            <androidx.appcompat.widget.AppCompatImageView
-                android:id="@+id/subscription"
+            <!-- Outbound Action Pill Badge -->
+            <TextView
+                android:id="@+id/action_badge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="top"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="@string/subscriptions"
-                android:focusable="true"
-                android:padding="12dp"
-                android:visibility="gone"
-                app:srcCompat="@drawable/ic_file_cloud_queue" />
+                android:layout_marginStart="6dp"
+                android:layout_marginEnd="6dp"
+                android:background="@drawable/bg_badge_proxy"
+                android:paddingStart="8dp"
+                android:paddingTop="3dp"
+                android:paddingEnd="8dp"
+                android:paddingBottom="3dp"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                tools:text="✈️ 代理" />
 
+            <!-- Enable/Disable Switch -->
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/enable"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="2dp" />
+
+            <!-- Drag & Drop Handle -->
+            <androidx.appcompat.widget.AppCompatImageView
+                android:id="@+id/drag_handle"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@null"
+                android:padding="4dp"
+                app:srcCompat="@drawable/ic_drag_handle" />
+
+            <!-- Kept for compatibility (hidden) -->
             <androidx.appcompat.widget.AppCompatImageView
                 android:id="@+id/edit"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="top"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="@string/edit"
-                android:focusable="true"
-                android:padding="12dp"
-                app:srcCompat="@drawable/ic_image_edit" />
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:visibility="gone" />
 
             <LinearLayout
                 android:id="@+id/share"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="top"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="@string/share"
-                android:focusable="true"
-                android:nextFocusLeft="@+id/container"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
                 android:visibility="gone">
-
-                <LinearLayout
-                    android:id="@+id/share_layer"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:padding="12dp">
-
-                    <androidx.appcompat.widget.AppCompatImageView
-                        android:id="@+id/shareIcon"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        app:srcCompat="@drawable/ic_social_share" />
-                </LinearLayout>
-
-
+                <View
+                    android:id="@+id/shareIcon"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp" />
             </LinearLayout>
+
         </LinearLayout>
 
-        <LinearLayout
+        <!-- Condition Chips Flow/Row -->
+        <HorizontalScrollView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="bottom"
-            android:orientation="horizontal"
+            android:scrollbars="none"
             android:paddingStart="12dp"
-            android:paddingEnd="8dp">
+            android:paddingEnd="12dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="10dp">
 
             <LinearLayout
-                android:layout_width="0dp"
+                android:id="@+id/chips_container"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
+                android:orientation="horizontal">
 
                 <TextView
-                    android:id="@+id/profile_type"
+                    android:id="@+id/tag_domain"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textAppearance="?android:attr/textAppearanceSmall"
-                    android:textColor="?attr/accentOrTextSecondary" />
+                    android:layout_marginEnd="6dp"
+                    android:background="@drawable/bg_tag_chip"
+                    android:paddingStart="6dp"
+                    android:paddingTop="2dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="2dp"
+                    android:textColor="?attr/accentOrTextSecondary"
+                    android:textSize="11sp"
+                    android:visibility="gone"
+                    tools:text="🌐 域名: 14项"
+                    tools:visibility="visible" />
 
                 <TextView
-                    android:layout_marginTop="4dp"
-                    android:layout_marginBottom="12dp"
-                    android:id="@+id/route_outbound"
+                    android:id="@+id/tag_ip"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textAppearance="?android:attr/textAppearanceSmall"
-                    android:textColor="?attr/accentOrTextSecondary" />
+                    android:layout_marginEnd="6dp"
+                    android:background="@drawable/bg_tag_chip"
+                    android:paddingStart="6dp"
+                    android:paddingTop="2dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="2dp"
+                    android:textColor="?attr/accentOrTextSecondary"
+                    android:textSize="11sp"
+                    android:visibility="gone"
+                    tools:text="🎯 IP: geoip:cn"
+                    tools:visibility="visible" />
+
+                <TextView
+                    android:id="@+id/tag_port"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="6dp"
+                    android:background="@drawable/bg_tag_chip"
+                    android:paddingStart="6dp"
+                    android:paddingTop="2dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="2dp"
+                    android:textColor="?attr/accentOrTextSecondary"
+                    android:textSize="11sp"
+                    android:visibility="gone"
+                    tools:text="🔌 端口: 443"
+                    tools:visibility="visible" />
+
+                <TextView
+                    android:id="@+id/tag_apps"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="6dp"
+                    android:background="@drawable/bg_tag_chip"
+                    android:paddingStart="6dp"
+                    android:paddingTop="2dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="2dp"
+                    android:textColor="?attr/accentOrTextSecondary"
+                    android:textSize="11sp"
+                    android:visibility="gone"
+                    tools:text="📱 应用: 2个"
+                    tools:visibility="visible" />
+
+                <TextView
+                    android:id="@+id/tag_network"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="6dp"
+                    android:background="@drawable/bg_tag_chip"
+                    android:paddingStart="6dp"
+                    android:paddingTop="2dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="2dp"
+                    android:textColor="?attr/accentOrTextSecondary"
+                    android:textSize="11sp"
+                    android:visibility="gone"
+                    tools:text="📡 UDP"
+                    tools:visibility="visible" />
+
+                <TextView
+                    android:id="@+id/tag_custom"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="6dp"
+                    android:background="@drawable/bg_tag_chip"
+                    android:paddingStart="6dp"
+                    android:paddingTop="2dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="2dp"
+                    android:textColor="?attr/accentOrTextSecondary"
+                    android:textSize="11sp"
+                    android:visibility="gone"
+                    tools:text="⚙️ 自定义配置" />
 
             </LinearLayout>
+        </HorizontalScrollView>
 
-            <androidx.appcompat.widget.SwitchCompat
-                android:layout_marginBottom="2dp"
-                android:id="@+id/enable"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
+        <!-- Kept for compatibility (hidden) -->
+        <TextView
+            android:id="@+id/profile_type"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:visibility="gone" />
 
-        </LinearLayout>
+        <TextView
+            android:id="@+id/route_outbound"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:visibility="gone" />
 
     </LinearLayout>
 

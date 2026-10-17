@@ -1,21 +1,27 @@
 package io.nekohasekai.sagernet.ui
 
+import android.annotation.SuppressLint
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import android.view.MenuItem
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.ViewCompat
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.chip.Chip
+import com.google.android.material.chip.ChipGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.ProfileManager
 import io.nekohasekai.sagernet.database.RuleEntity
 import io.nekohasekai.sagernet.database.SagerDatabase
-import io.nekohasekai.sagernet.databinding.LayoutEmptyRouteBinding
 import io.nekohasekai.sagernet.databinding.LayoutRouteItemBinding
 import io.nekohasekai.sagernet.ktx.*
 import io.nekohasekai.sagernet.widget.ListListener
@@ -23,10 +29,21 @@ import io.nekohasekai.sagernet.widget.UndoSnackbarManager
 
 class RouteFragment : ToolbarFragment(R.layout.layout_route), Toolbar.OnMenuItemClickListener {
 
+    enum class RouteFilter { ALL, PROXY, BYPASS, BLOCK }
+
     lateinit var activity: MainActivity
     lateinit var ruleListView: RecyclerView
     lateinit var ruleAdapter: RuleAdapter
     lateinit var undoManager: UndoSnackbarManager<RuleEntity>
+    lateinit var itemTouchHelper: ItemTouchHelper
+
+    lateinit var chipGroup: ChipGroup
+    lateinit var chipAll: Chip
+    lateinit var chipProxy: Chip
+    lateinit var chipBypass: Chip
+    lateinit var chipBlock: Chip
+
+    var currentFilter: RouteFilter = RouteFilter.ALL
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -38,6 +55,22 @@ class RouteFragment : ToolbarFragment(R.layout.layout_route), Toolbar.OnMenuItem
         toolbar.inflateMenu(R.menu.add_route_menu)
         toolbar.setOnMenuItemClickListener(this)
 
+        chipGroup = view.findViewById(R.id.filter_chip_group)
+        chipAll = view.findViewById(R.id.chip_all)
+        chipProxy = view.findViewById(R.id.chip_proxy)
+        chipBypass = view.findViewById(R.id.chip_bypass)
+        chipBlock = view.findViewById(R.id.chip_block)
+
+        chipGroup.setOnCheckedChangeListener { _, checkedId ->
+            currentFilter = when (checkedId) {
+                R.id.chip_proxy -> RouteFilter.PROXY
+                R.id.chip_bypass -> RouteFilter.BYPASS
+                R.id.chip_block -> RouteFilter.BLOCK
+                else -> RouteFilter.ALL
+            }
+            ruleAdapter.applyFilter()
+        }
+
         ruleListView = view.findViewById(R.id.route_list)
         ruleListView.layoutManager = FixedLinearLayoutManager(ruleListView)
         ruleAdapter = RuleAdapter()
@@ -45,42 +78,47 @@ class RouteFragment : ToolbarFragment(R.layout.layout_route), Toolbar.OnMenuItem
         ruleListView.adapter = ruleAdapter
         undoManager = UndoSnackbarManager(activity, ruleAdapter)
 
-        ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(ItemTouchHelper.UP or ItemTouchHelper.DOWN, ItemTouchHelper.START) {
-
+        itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
+            ItemTouchHelper.UP or ItemTouchHelper.DOWN,
+            ItemTouchHelper.START
+        ) {
             override fun getSwipeDirs(
                 recyclerView: RecyclerView,
                 viewHolder: RecyclerView.ViewHolder,
-            ) = if (viewHolder is RuleAdapter.DocumentHolder) {
-                0
-            } else {
-                super.getSwipeDirs(recyclerView, viewHolder)
+            ): Int {
+                return ItemTouchHelper.START
             }
 
             override fun getDragDirs(
                 recyclerView: RecyclerView,
                 viewHolder: RecyclerView.ViewHolder,
-            ) = if (viewHolder is RuleAdapter.DocumentHolder) {
-                0
-            } else {
-                super.getDragDirs(recyclerView, viewHolder)
+            ): Int {
+                return if (currentFilter == RouteFilter.ALL) {
+                    ItemTouchHelper.UP or ItemTouchHelper.DOWN
+                } else {
+                    0
+                }
             }
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                 val index = viewHolder.bindingAdapterPosition
+                if (index == RecyclerView.NO_POSITION || index >= ruleAdapter.displayedList.size) return
+                val rule = ruleAdapter.displayedList[index]
                 ruleAdapter.remove(index)
-                undoManager.remove(index to (viewHolder as RuleAdapter.RuleHolder).rule)
+                undoManager.remove(index to rule)
             }
 
             override fun onMove(
                 recyclerView: RecyclerView,
-                viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder,
+                viewHolder: RecyclerView.ViewHolder,
+                target: RecyclerView.ViewHolder,
             ): Boolean {
-                return if (target is RuleAdapter.DocumentHolder) {
-                    false
-                } else {
-                    ruleAdapter.move(viewHolder.bindingAdapterPosition, target.bindingAdapterPosition)
-                    true
-                }
+                if (currentFilter != RouteFilter.ALL) return false
+                val from = viewHolder.bindingAdapterPosition
+                val to = target.bindingAdapterPosition
+                if (from == RecyclerView.NO_POSITION || to == RecyclerView.NO_POSITION) return false
+                ruleAdapter.move(from, to)
+                return true
             }
 
             override fun clearView(
@@ -90,7 +128,8 @@ class RouteFragment : ToolbarFragment(R.layout.layout_route), Toolbar.OnMenuItem
                 super.clearView(recyclerView, viewHolder)
                 ruleAdapter.commitMove()
             }
-        }).attachToRecyclerView(ruleListView)
+        })
+        itemTouchHelper.attachToRecyclerView(ruleListView)
     }
 
     override fun onDestroy() {
@@ -121,19 +160,50 @@ class RouteFragment : ToolbarFragment(R.layout.layout_route), Toolbar.OnMenuItem
             R.id.action_manage_assets -> {
                 startActivity(Intent(requireContext(), AssetsActivity::class.java))
             }
+            R.id.action_route_help -> {
+                requireContext().launchCustomTab("https://matsuridayo.github.io/nb4a-route/")
+            }
         }
         return true
     }
 
-    inner class RuleAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>(), ProfileManager.RuleListener, UndoSnackbarManager.Interface<RuleEntity> {
+    inner class RuleAdapter : RecyclerView.Adapter<RuleAdapter.RuleHolder>(),
+        ProfileManager.RuleListener, UndoSnackbarManager.Interface<RuleEntity> {
 
         val ruleList = ArrayList<RuleEntity>()
+        val displayedList = ArrayList<RuleEntity>()
+
+        fun applyFilter() {
+            displayedList.clear()
+            when (currentFilter) {
+                RouteFilter.ALL -> displayedList.addAll(ruleList)
+                RouteFilter.PROXY -> displayedList.addAll(ruleList.filter { it.outbound >= 0L })
+                RouteFilter.BYPASS -> displayedList.addAll(ruleList.filter { it.outbound == -1L })
+                RouteFilter.BLOCK -> displayedList.addAll(ruleList.filter { it.outbound == -2L })
+            }
+            notifyDataSetChanged()
+            updateFilterTabs()
+        }
+
+        private fun updateFilterTabs() {
+            if (!::chipAll.isInitialized) return
+            val totalCount = ruleList.size
+            val proxyCount = ruleList.count { it.outbound >= 0L }
+            val bypassCount = ruleList.count { it.outbound == -1L }
+            val blockCount = ruleList.count { it.outbound == -2L }
+
+            chipAll.text = getString(R.string.filter_all, totalCount)
+            chipProxy.text = getString(R.string.filter_proxy, proxyCount)
+            chipBypass.text = getString(R.string.filter_bypass, bypassCount)
+            chipBlock.text = getString(R.string.filter_block, blockCount)
+        }
+
         suspend fun reload() {
             val rules = ProfileManager.getRules()
             ruleListView.post {
                 ruleList.clear()
                 ruleList.addAll(rules)
-                ruleAdapter.notifyDataSetChanged()
+                applyFilter()
             }
         }
 
@@ -143,76 +213,85 @@ class RouteFragment : ToolbarFragment(R.layout.layout_route), Toolbar.OnMenuItem
             }
         }
 
-        override fun onCreateViewHolder(
-            parent: ViewGroup,
-            viewType: Int,
-        ): RecyclerView.ViewHolder {
-            return if (viewType == 0) {
-                DocumentHolder(LayoutEmptyRouteBinding.inflate(layoutInflater, parent, false))
-            } else {
-                RuleHolder(LayoutRouteItemBinding.inflate(layoutInflater, parent, false))
-            }
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RuleHolder {
+            return RuleHolder(LayoutRouteItemBinding.inflate(layoutInflater, parent, false))
         }
 
-        override fun getItemViewType(position: Int): Int {
-            if (position == 0) return 0
-            return 1
-        }
-
-        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-            if (holder is DocumentHolder) {
-                holder.bind()
-            } else if (holder is RuleHolder) {
-                holder.bind(ruleList[position - 1])
-            }
+        override fun onBindViewHolder(holder: RuleHolder, position: Int) {
+            holder.bind(displayedList[position], position)
         }
 
         override fun getItemCount(): Int {
-            return ruleList.size + 1
+            return displayedList.size
         }
 
         override fun getItemId(position: Int): Long {
-            if (position == 0) return 0L
-            return ruleList[position - 1].id
+            return displayedList[position].id
         }
 
-        private val updated = HashSet<RuleEntity>()
         fun move(from: Int, to: Int) {
-            val first = ruleList[from - 1]
-            var previousOrder = first.userOrder
-            val (step, range) = if (from < to) Pair(1, from - 1 until to - 1) else Pair(-1, to downTo from - 1)
-            for (i in range) {
-                val next = ruleList[i + step]
-                val order = next.userOrder
-                next.userOrder = previousOrder
-                previousOrder = order
-                ruleList[i] = next
-                updated.add(next)
+            if (from < 0 || to < 0 || from >= displayedList.size || to >= displayedList.size || from == to) return
+
+            if (from < to) {
+                for (i in from until to) {
+                    java.util.Collections.swap(displayedList, i, i + 1)
+                }
+            } else {
+                for (i in from downTo to + 1) {
+                    java.util.Collections.swap(displayedList, i, i - 1)
+                }
             }
-            first.userOrder = previousOrder
-            ruleList[to - 1] = first
-            updated.add(first)
+
+            // Sync with ruleList
+            if (currentFilter == RouteFilter.ALL) {
+                ruleList.clear()
+                ruleList.addAll(displayedList)
+            }
+
             notifyItemMoved(from, to)
         }
 
-        fun commitMove() = runOnDefaultDispatcher {
-            if (updated.isNotEmpty()) {
-                SagerDatabase.rulesDao.updateRules(updated.toList())
-                updated.clear()
+        fun commitMove() {
+            // Re-sequence userOrder cleanly (1, 2, 3...)
+            displayedList.forEachIndexed { index, ruleEntity ->
+                ruleEntity.userOrder = (index + 1).toLong()
+            }
+            if (currentFilter == RouteFilter.ALL) {
+                ruleList.clear()
+                ruleList.addAll(displayedList)
+            }
+
+            // Update visual index badges after the drop is completed
+            notifyItemRangeChanged(0, displayedList.size)
+
+            val toPersist = ruleList.toList()
+            runOnDefaultDispatcher {
+                SagerDatabase.rulesDao.updateRules(toPersist)
                 needReload()
             }
         }
 
         fun remove(index: Int) {
-            ruleList.removeAt(index - 1)
+            if (index < 0 || index >= displayedList.size) return
+            val rule = displayedList.removeAt(index)
+            ruleList.remove(rule)
             notifyItemRemoved(index)
+            updateFilterTabs()
         }
 
         override fun undo(actions: List<Pair<Int, RuleEntity>>) {
             for ((index, item) in actions) {
-                ruleList.add(index - 1, item)
-                notifyItemInserted(index)
+                if (index in 0..displayedList.size) {
+                    displayedList.add(index, item)
+                    ruleList.add(index, item)
+                    notifyItemInserted(index)
+                } else {
+                    displayedList.add(item)
+                    ruleList.add(item)
+                    notifyItemInserted(displayedList.size - 1)
+                }
             }
+            updateFilterTabs()
         }
 
         override fun commit(actions: List<Pair<Int, RuleEntity>>) {
@@ -225,7 +304,7 @@ class RouteFragment : ToolbarFragment(R.layout.layout_route), Toolbar.OnMenuItem
         override suspend fun onAdd(rule: RuleEntity) {
             ruleListView.post {
                 ruleList.add(rule)
-                ruleAdapter.notifyItemInserted(ruleList.size)
+                applyFilter()
                 needReload()
             }
         }
@@ -235,7 +314,7 @@ class RouteFragment : ToolbarFragment(R.layout.layout_route), Toolbar.OnMenuItem
             if (index == -1) return
             ruleListView.post {
                 ruleList[index] = rule
-                ruleAdapter.notifyItemChanged(index + 1)
+                applyFilter()
                 needReload()
             }
         }
@@ -248,7 +327,7 @@ class RouteFragment : ToolbarFragment(R.layout.layout_route), Toolbar.OnMenuItem
                 }
             } else ruleListView.post {
                 ruleList.removeAt(index)
-                ruleAdapter.notifyItemRemoved(index + 1)
+                applyFilter()
                 needReload()
             }
         }
@@ -256,39 +335,119 @@ class RouteFragment : ToolbarFragment(R.layout.layout_route), Toolbar.OnMenuItem
         override suspend fun onCleared() {
             ruleListView.post {
                 ruleList.clear()
-                ruleAdapter.notifyDataSetChanged()
+                displayedList.clear()
+                notifyDataSetChanged()
+                updateFilterTabs()
                 needReload()
             }
         }
 
-        inner class DocumentHolder(binding: LayoutEmptyRouteBinding) : RecyclerView.ViewHolder(binding.root) {
-            fun bind() {
-                itemView.setOnClickListener {
-                    it.context.launchCustomTab("https://matsuridayo.github.io/nb4a-route/")
-                }
-            }
-        }
-
-        inner class RuleHolder(binding: LayoutRouteItemBinding) : RecyclerView.ViewHolder(binding.root) {
+        inner class RuleHolder(val binding: LayoutRouteItemBinding) :
+            RecyclerView.ViewHolder(binding.root) {
 
             lateinit var rule: RuleEntity
-            val profileName = binding.profileName
-            val profileType = binding.profileType
-            val routeOutbound = binding.routeOutbound
-            val editButton = binding.edit
-            val shareLayout = binding.share
-            val enableSwitch = binding.enable
 
-            fun bind(ruleEntity: RuleEntity) {
+            @SuppressLint("ClickableViewAccessibility")
+            fun bind(ruleEntity: RuleEntity, position: Int) {
                 rule = ruleEntity
-                profileName.text = rule.displayName()
-                profileType.text = rule.mkSummary()
-                routeOutbound.text = rule.displayOutbound()
-                itemView.setOnClickListener {
-                    enableSwitch.performClick()
+
+                // 1. Order Index Badge
+                binding.orderBadge.text = "#${position + 1}"
+
+                // 2. Profile Display Name
+                binding.profileName.text = rule.displayName()
+
+                // 3. Outbound Action Pill Badge
+                when (rule.outbound) {
+                    0L -> {
+                        binding.actionBadge.text = "✈️ " + getString(R.string.route_proxy)
+                        binding.actionBadge.setBackgroundResource(R.drawable.bg_badge_proxy)
+                        binding.actionBadge.setTextColor(Color.parseColor("#1976D2"))
+                    }
+                    -1L -> {
+                        binding.actionBadge.text = "⚡ " + getString(R.string.route_bypass)
+                        binding.actionBadge.setBackgroundResource(R.drawable.bg_badge_bypass)
+                        binding.actionBadge.setTextColor(Color.parseColor("#2E7D32"))
+                    }
+                    -2L -> {
+                        binding.actionBadge.text = "🚫 " + getString(R.string.route_block)
+                        binding.actionBadge.setBackgroundResource(R.drawable.bg_badge_block)
+                        binding.actionBadge.setTextColor(Color.parseColor("#D32F2F"))
+                    }
+                    else -> {
+                        val profileName = ProfileManager.getProfile(rule.outbound)?.displayName()
+                            ?: getString(R.string.route_profile)
+                        binding.actionBadge.text = "🔀 $profileName"
+                        binding.actionBadge.setBackgroundResource(R.drawable.bg_badge_custom)
+                        binding.actionBadge.setTextColor(Color.parseColor("#7B1FA2"))
+                    }
                 }
-                enableSwitch.isChecked = rule.enabled
-                enableSwitch.setOnCheckedChangeListener { _, isChecked ->
+
+                // 4. Condition Chips
+                // Domain
+                if (rule.domains.isNotBlank()) {
+                    val domainCount = rule.domains.split("\n", ",").filter { it.isNotBlank() }.size
+                    binding.tagDomain.isVisible = true
+                    binding.tagDomain.text = if (domainCount == 1) {
+                        "🌐 " + rule.domains.trim()
+                    } else {
+                        "🌐 域名: ${domainCount}项"
+                    }
+                } else {
+                    binding.tagDomain.isVisible = false
+                }
+
+                // IP
+                if (rule.ip.isNotBlank()) {
+                    val ipCount = rule.ip.split("\n", ",").filter { it.isNotBlank() }.size
+                    binding.tagIp.isVisible = true
+                    binding.tagIp.text = if (ipCount == 1) {
+                        "🎯 " + rule.ip.trim()
+                    } else {
+                        "🎯 IP: ${ipCount}项"
+                    }
+                } else {
+                    binding.tagIp.isVisible = false
+                }
+
+                // Port
+                if (rule.port.isNotBlank()) {
+                    binding.tagPort.isVisible = true
+                    binding.tagPort.text = "🔌 端口: ${rule.port.trim()}"
+                } else {
+                    binding.tagPort.isVisible = false
+                }
+
+                // Packages/Apps
+                if (rule.packages.isNotEmpty()) {
+                    binding.tagApps.isVisible = true
+                    binding.tagApps.text = "📱 应用: ${rule.packages.size}个"
+                } else {
+                    binding.tagApps.isVisible = false
+                }
+
+                // Network
+                if (rule.network.isNotBlank()) {
+                    binding.tagNetwork.isVisible = true
+                    binding.tagNetwork.text = "📡 " + rule.network.uppercase()
+                } else {
+                    binding.tagNetwork.isVisible = false
+                }
+
+                // Custom Config
+                binding.tagCustom.isVisible = rule.config.isNotBlank()
+
+                // 5. Card click: Directly enters RouteSettingsActivity (fixes accidental switch toggle!)
+                itemView.setOnClickListener {
+                    startActivity(Intent(it.context, RouteSettingsActivity::class.java).apply {
+                        putExtra(RouteSettingsActivity.EXTRA_ROUTE_ID, rule.id)
+                    })
+                }
+
+                // 6. Switch toggle: Isolated click behavior
+                binding.enable.setOnCheckedChangeListener(null)
+                binding.enable.isChecked = rule.enabled
+                binding.enable.setOnCheckedChangeListener { _, isChecked ->
                     runOnDefaultDispatcher {
                         rule.enabled = isChecked
                         SagerDatabase.rulesDao.updateRule(rule)
@@ -297,10 +456,21 @@ class RouteFragment : ToolbarFragment(R.layout.layout_route), Toolbar.OnMenuItem
                         }
                     }
                 }
-                editButton.setOnClickListener {
-                    startActivity(Intent(it.context, RouteSettingsActivity::class.java).apply {
-                        putExtra(RouteSettingsActivity.EXTRA_ROUTE_ID, rule.id)
-                    })
+
+                // 7. Drag Handle Touch Listener
+                binding.dragHandle.setOnTouchListener { _, event ->
+                    if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+                        if (currentFilter == RouteFilter.ALL) {
+                            itemTouchHelper.startDrag(this)
+                        } else {
+                            Toast.makeText(
+                                itemView.context,
+                                R.string.route_drag_disabled_hint,
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                    false
                 }
             }
         }
