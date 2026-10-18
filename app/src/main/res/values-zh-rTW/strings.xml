@@ -414,4 +414,5 @@
     <string name="backup_not_file">不是一個備份檔案，預計 .json，但 %s</string>
     <string name="packet_encoding">封包編碼</string>
     <string name="custom">自訂</string>
+    <string name="failed">失敗</string>
 </resources>

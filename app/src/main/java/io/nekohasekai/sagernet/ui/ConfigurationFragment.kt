@@ -702,15 +702,16 @@ class ConfigurationFragment @JvmOverloads constructor(
                         profileStatusColor = context.getColour(R.color.material_green_500)
                     }
 
-                    2 -> {
-                        profileStatusText = profile.error
-                        profileStatusColor = context.getColour(R.color.material_red_500)
-                    }
-
-                    3 -> {
-                        val err = profile.error ?: ""
-                        val msg = Protocols.genFriendlyMsg(err)
-                        profileStatusText = if (msg != err) msg else getString(R.string.unavailable)
+                    2, 3 -> {
+                        val err = profile.error.orEmpty()
+                        val errL = err.lowercase()
+                        val isTimeout = errL.contains("timeout") || errL.contains("deadline") ||
+                                err == getString(R.string.connection_test_timeout)
+                        profileStatusText = if (isTimeout) {
+                            getString(R.string.connection_test_timeout)
+                        } else {
+                            getString(R.string.failed)
+                        }
                         profileStatusColor = context.getColour(R.color.material_red_500)
                     }
                 }
@@ -973,8 +974,16 @@ class ConfigurationFragment @JvmOverloads constructor(
                     newGroupList = ArrayList(SagerDatabase.groupDao.allGroups())
                 }
                 newGroupList.forEach {
+                    var needUpdate = false
                     if (it.ungrouped && it.type != GroupType.BASIC) {
                         it.type = GroupType.BASIC
+                        needUpdate = true
+                    }
+                    if (it.ungrouped && it.order != GroupOrder.ORIGIN) {
+                        it.order = GroupOrder.ORIGIN
+                        needUpdate = true
+                    }
+                    if (needUpdate) {
                         SagerDatabase.groupDao.updateGroup(it)
                     }
                 }
@@ -1632,25 +1641,29 @@ class ConfigurationFragment @JvmOverloads constructor(
                     } else {
                         profileStatus.text = ""
                     }
+                    profileStatus.setOnClickListener(null)
                 } else if (proxyEntity.status == 1) {
                     profileStatus.text = getString(R.string.available, proxyEntity.ping)
                     profileStatus.setTextColor(requireContext().getColour(R.color.material_green_500))
+                    profileStatus.setOnClickListener(null)
                 } else {
                     profileStatus.setTextColor(requireContext().getColour(R.color.material_red_500))
-                    if (proxyEntity.status == 2) {
-                        profileStatus.text = proxyEntity.error
+                    val err = proxyEntity.error.orEmpty()
+                    val errL = err.lowercase()
+                    val isTimeout = errL.contains("timeout") || errL.contains("deadline") ||
+                            err == getString(R.string.connection_test_timeout)
+                    profileStatus.text = if (isTimeout) {
+                        getString(R.string.connection_test_timeout)
+                    } else {
+                        getString(R.string.failed)
                     }
-                }
-
-                if (proxyEntity.status == 3) {
-                    val err = proxyEntity.error ?: "<?>"
-                    val msg = Protocols.genFriendlyMsg(err)
-                    profileStatus.text = if (msg != err) msg else getString(R.string.unavailable)
-                    profileStatus.setOnClickListener {
-                        alert(err).tryToShow()
+                    if (err.isNotBlank()) {
+                        profileStatus.setOnClickListener {
+                            alert(err).tryToShow()
+                        }
+                    } else {
+                        profileStatus.setOnClickListener(null)
                     }
-                } else {
-                    profileStatus.setOnClickListener(null)
                 }
 
                 editButton.setOnClickListener {

@@ -551,4 +551,5 @@
     <string name="filter_block">拦截屏蔽 (%d)</string>
     <string name="route_drag_disabled_hint">请切换到「全部」标签后再拖拽排序</string>
     <string name="route_edit">编辑路由规则</string>
+    <string name="failed">失败</string>
 </resources>

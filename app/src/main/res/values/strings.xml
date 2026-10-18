@@ -631,4 +631,5 @@
     <string name="filter_block">Block (%d)</string>
     <string name="route_drag_disabled_hint">Switch to \"All\" to reorder rules</string>
     <string name="route_edit">Edit Route</string>
+    <string name="failed">Failed</string>
 </resources>
