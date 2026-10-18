@@ -860,12 +860,13 @@ class ConfigurationFragment @JvmOverloads constructor(
             runOnDefaultDispatcher {
                 mainJob.cancel()
                 testJobs.forEach { it.cancel() }
-                test.results.forEach {
-                    try {
-                        ProfileManager.updateProfile(it)
-                    } catch (e: Exception) {
-                        Logs.w(e)
+                try {
+                    val resultsList = test.results.toList()
+                    if (resultsList.isNotEmpty()) {
+                        ProfileManager.updateProfile(resultsList)
                     }
+                } catch (e: Exception) {
+                    Logs.w(e)
                 }
                 GroupManager.postReload(DataStore.currentGroupId())
                 DataStore.runningTest = false
@@ -929,12 +930,13 @@ class ConfigurationFragment @JvmOverloads constructor(
             runOnDefaultDispatcher {
                 mainJob.cancel()
                 testJobs.forEach { it.cancel() }
-                test.results.forEach {
-                    try {
-                        ProfileManager.updateProfile(it)
-                    } catch (e: Exception) {
-                        Logs.w(e)
+                try {
+                    val resultsList = test.results.toList()
+                    if (resultsList.isNotEmpty()) {
+                        ProfileManager.updateProfile(resultsList)
                     }
+                } catch (e: Exception) {
+                    Logs.w(e)
                 }
                 GroupManager.postReload(DataStore.currentGroupId())
                 DataStore.runningTest = false
@@ -1500,7 +1502,11 @@ class ConfigurationFragment @JvmOverloads constructor(
 
                 var selectedProfileIndex = -1
 
-                if (selected) {
+                val isCurrentGroup = selected || (parentFragment as? ConfigurationFragment)?.let { cf ->
+                    cf.adapter.groupList.getOrNull(cf.groupPager.currentItem)?.id == proxyGroup.id
+                } ?: (proxyGroup.id == DataStore.selectedGroup)
+
+                if (isCurrentGroup) {
                     val selectedProxy = selectedItem?.id ?: DataStore.selectedProxy
                     selectedProfileIndex = newProfileIds.indexOf(selectedProxy)
                 }
@@ -1677,9 +1683,11 @@ class ConfigurationFragment @JvmOverloads constructor(
                     val started =
                         selected && DataStore.serviceState.started && DataStore.currentProfile == proxyEntity.id
                     onMainDispatcher {
-                        editButton.isEnabled = !started
-                        removeButton.isEnabled = !started
-                        selectedView.visibility = if (selected) View.VISIBLE else View.INVISIBLE
+                        if (::entity.isInitialized && entity.id == proxyEntity.id) {
+                            editButton.isEnabled = !started
+                            removeButton.isEnabled = !started
+                            selectedView.visibility = if (selected) View.VISIBLE else View.INVISIBLE
+                        }
                     }
 
                     fun showShare(anchor: View) {

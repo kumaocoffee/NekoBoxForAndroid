@@ -387,7 +387,9 @@ class MainActivity : ThemedActivity(),
     }
 
     override fun cbSelectorUpdate(id: Long) {
+        if (id <= 0L) return
         val old = DataStore.selectedProxy
+        if (old == id) return
         DataStore.selectedProxy = id
         DataStore.currentProfile = id
         runOnDefaultDispatcher {

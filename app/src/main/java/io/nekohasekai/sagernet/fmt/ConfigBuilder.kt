@@ -79,7 +79,7 @@ fun buildConfig(
     }
 
     val trafficMap = HashMap<String, List<ProxyEntity>>()
-    val tagMap = HashMap<Long, String>()
+    val tagMap = LinkedHashMap<Long, String>()
     val globalOutbounds = HashMap<Long, String>()
     val selectorNames = ArrayList<String>()
     val group = SagerDatabase.groupDao.getById(proxy.groupId)
@@ -506,14 +506,19 @@ fun buildConfig(
 
         // build outbounds
         if (buildSelector) {
-            val list = group.id.let { SagerDatabase.proxyDao.getByGroup(it) }
+            val rawList = group.id.let { SagerDatabase.proxyDao.getByGroup(it) }
+            val list = when (group.order) {
+                GroupOrder.BY_NAME -> rawList.sortedBy { it.displayName() }
+                GroupOrder.BY_DELAY -> rawList.sortedBy { if (it.status == 1) it.ping else 114514 }
+                else -> rawList
+            }
             list.forEach {
                 tagMap[it.id] = buildChain(it.id, it)
             }
             outbounds.add(0, Outbound_SelectorOptions().apply {
                 type = "selector"
                 tag = TAG_PROXY
-                default_ = tagMap[proxy.id]
+                default_ = tagMap[proxy.id] ?: tagMap.values.firstOrNull()
                 outbounds = tagMap.values.toList()
             })
         } else {
@@ -760,12 +765,6 @@ fun buildConfig(
             route.rules.add(Rule_DefaultOptions().apply {
                 ip_cidr = listOf("224.0.0.0/3", "ff00::/8")
                 source_ip_cidr = listOf("224.0.0.0/3", "ff00::/8")
-                action = "reject"
-            })
-            // block WebRTC STUN ports (3478, 5349) to prevent mobile browser local IP leak
-            route.rules.add(Rule_DefaultOptions().apply {
-                port = listOf(3478, 5349)
-                network = listOf("udp")
                 action = "reject"
             })
             // FakeDNS obj

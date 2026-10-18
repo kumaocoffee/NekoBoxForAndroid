@@ -96,24 +96,6 @@
                 android:padding="4dp"
                 app:srcCompat="@drawable/ic_drag_handle" />
 
-            <!-- Kept for compatibility (hidden) -->
-            <androidx.appcompat.widget.AppCompatImageView
-                android:id="@+id/edit"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:visibility="gone" />
-
-            <LinearLayout
-                android:id="@+id/share"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:visibility="gone">
-                <View
-                    android:id="@+id/shareIcon"
-                    android:layout_width="0dp"
-                    android:layout_height="0dp" />
-            </LinearLayout>
-
         </LinearLayout>
 
         <!-- Condition Chips Flow/Row -->
