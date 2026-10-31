@@ -358,14 +358,23 @@ class MainActivity : ThemedActivity(),
         changeState(state, msg, true)
     }
 
+    private var autoConnectTriggered = false
+
     val connection = SagerConnection(SagerConnection.CONNECTION_ID_MAIN_ACTIVITY_FOREGROUND, true)
-    override fun onServiceConnected(service: ISagerNetService) = changeState(
-        try {
+    override fun onServiceConnected(service: ISagerNetService) {
+        val state = try {
             BaseService.State.values()[service.state]
         } catch (_: RemoteException) {
             BaseService.State.Idle
         }
-    )
+        changeState(state)
+        if (!autoConnectTriggered) {
+            autoConnectTriggered = true
+            if (DataStore.persistAcrossReboot && DataStore.selectedProxy > 0 && !state.started) {
+                connect.launch(null)
+            }
+        }
+    }
 
     override fun onServiceDisconnected() = changeState(BaseService.State.Idle)
     override fun onBinderDied() {

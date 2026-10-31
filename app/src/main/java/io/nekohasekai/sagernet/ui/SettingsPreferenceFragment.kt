@@ -9,6 +9,7 @@ import android.widget.EditText
 import androidx.core.app.ActivityCompat
 import androidx.preference.*
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import io.nekohasekai.sagernet.BootReceiver
 import io.nekohasekai.sagernet.Key
 import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.SagerNet
@@ -162,6 +163,10 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
         tunImplementation.onPreferenceChangeListener = reloadListener
         acquireWakeLock.onPreferenceChangeListener = reloadListener
         globalCustomConfig.onPreferenceChangeListener = reloadListener
+        findPreference<SwitchPreference>(Key.PERSIST_ACROSS_REBOOT)?.setOnPreferenceChangeListener { _, newValue ->
+            BootReceiver.enabled = newValue as Boolean
+            true
+        }
     }
 
     override fun onResume() {

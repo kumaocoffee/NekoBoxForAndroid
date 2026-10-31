@@ -122,9 +122,9 @@ object DataStore : OnPreferenceDataStoreChangeListener {
 
     var globalCustomConfig by configurationStore.string(Key.GLOBAL_CUSTOM_CONFIG) { "" }
 
-    var remoteDns by configurationStore.string(Key.REMOTE_DNS) { "https://dns.google/dns-query" }
+    var remoteDns by configurationStore.string(Key.REMOTE_DNS) { "https://8.8.8.8/dns-query" }
     var directDns by configurationStore.string(Key.DIRECT_DNS) { "https://223.5.5.5/dns-query" }
-    var enableDnsRouting by configurationStore.boolean(Key.ENABLE_DNS_ROUTING) { false }
+    var enableDnsRouting by configurationStore.boolean(Key.ENABLE_DNS_ROUTING) { true }
     var enableFakeDns by configurationStore.boolean(Key.ENABLE_FAKEDNS) { true }
 
     var rulesProvider by configurationStore.stringToInt(Key.RULES_PROVIDER)
@@ -151,6 +151,16 @@ object DataStore : OnPreferenceDataStoreChangeListener {
         }
         if (configurationStore.getString(Key.ENABLE_FAKEDNS) == null) {
             enableFakeDns = true
+        }
+        if (configurationStore.getString(Key.IPV6_MODE) == null) {
+            ipv6Mode = IPv6Mode.DISABLE
+        }
+        val currentRemoteDns = configurationStore.getString(Key.REMOTE_DNS)
+        if (currentRemoteDns == null || currentRemoteDns == "https://dns.google/dns-query") {
+            remoteDns = "https://8.8.8.8/dns-query"
+        }
+        if (configurationStore.getString(Key.ENABLE_DNS_ROUTING) == null) {
+            enableDnsRouting = true
         }
     }
 

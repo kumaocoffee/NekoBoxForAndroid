@@ -209,10 +209,30 @@ object ProfileManager {
 
     val TELEGRAM_PACKAGES = setOf(
         "org.telegram.messenger",
+        "org.telegram.messenger.web",
+        "org.telegram.messenger.beta",
         "org.telegram.plus",
         "org.thunderdog.challegram",
-        "nekox.messenger"
+        "nekox.messenger",
+        "tw.nekomimi.nekogram",
+        "org.forkclient.messenger"
     )
+
+    val TELEGRAM_IP_CIDRS = """
+        91.108.4.0/22
+        91.108.8.0/22
+        91.108.12.0/22
+        91.108.16.0/22
+        91.108.20.0/22
+        91.108.56.0/22
+        149.154.160.0/20
+        149.154.164.0/22
+        149.154.168.0/22
+        149.154.172.0/22
+        185.76.151.0/24
+        2001:67c:4e8::/48
+        2001:b88::/32
+    """.trimIndent()
 
     private suspend fun createDefaultRules() {
         val isZh = Locale.getDefault().language == "zh"
@@ -251,7 +271,7 @@ object ProfileManager {
             RuleEntity(
                 name = if (isZh) "✈️ Telegram" else "✈️ Telegram",
                 domains = "geosite:telegram",
-                ip = "geoip:telegram",
+                ip = TELEGRAM_IP_CIDRS,
                 packages = TELEGRAM_PACKAGES,
                 outbound = 0,
                 enabled = true
@@ -287,8 +307,8 @@ object ProfileManager {
     }
 
     suspend fun checkRulesMigration() {
-        if (DataStore.rulesVersion < 5) {
-            DataStore.rulesVersion = 5
+        if (DataStore.rulesVersion < 6) {
+            DataStore.rulesVersion = 6
             val rules = SagerDatabase.rulesDao.allRules()
             if (rules.isEmpty()) return
 
@@ -312,8 +332,8 @@ object ProfileManager {
                 ?: createRule(RuleEntity(name = if (isZh) "屏蔽广告" else "Block Ads", domains = "geosite:category-ads-all", outbound = -2, enabled = true), false)
             val googleRule = remaining.find { (it.domains.contains("googlevideo.com") || it.packages.contains("com.android.vending") || it.domains.contains("googleapis.cn")) && it.outbound == 0L }
                 ?: createRule(RuleEntity(name = if (isZh) "📹 油管与谷歌生态" else "📹 YouTube & Google", domains = GOOGLE_PLAY_DOMAINS, packages = GOOGLE_PLAY_PACKAGES, outbound = 0, enabled = true), false)
-            val telegramRule = remaining.find { (it.domains.contains("geosite:telegram") || it.ip.contains("geoip:telegram") || it.packages.contains("org.telegram.messenger")) && it.outbound == 0L }
-                ?: createRule(RuleEntity(name = if (isZh) "✈️ Telegram" else "✈️ Telegram", domains = "geosite:telegram", ip = "geoip:telegram", packages = TELEGRAM_PACKAGES, outbound = 0, enabled = true), false)
+            val telegramRule = remaining.find { (it.domains.contains("geosite:telegram") || it.ip.contains("geoip:telegram") || it.ip.contains("91.108.") || it.packages.contains("org.telegram.messenger")) && it.outbound == 0L }
+                ?: createRule(RuleEntity(name = if (isZh) "✈️ Telegram" else "✈️ Telegram", domains = "geosite:telegram", ip = TELEGRAM_IP_CIDRS, packages = TELEGRAM_PACKAGES, outbound = 0, enabled = true), false)
             val cnDomainRule = remaining.find { it.domains.contains("geosite:cn") && it.outbound == -1L }
                 ?: createRule(RuleEntity(name = if (isZh) "中国 域名规则" else "Bypass CN Domains", domains = "geosite:cn", outbound = -1, enabled = true), false)
             val cnIpRule = remaining.find { it.ip.contains("geoip:cn") && it.outbound == -1L }
@@ -336,7 +356,7 @@ object ProfileManager {
                     3 -> {
                         rule.name = if (isZh) "✈️ Telegram" else "✈️ Telegram"
                         rule.domains = "geosite:telegram"
-                        rule.ip = "geoip:telegram"
+                        rule.ip = TELEGRAM_IP_CIDRS
                         rule.packages = TELEGRAM_PACKAGES
                     }
                     4 -> rule.name = if (isZh) "中国 域名规则" else "Bypass CN Domains"
@@ -355,7 +375,7 @@ object ProfileManager {
         var rules = SagerDatabase.rulesDao.allRules()
         if (rules.isEmpty() && !DataStore.rulesFirstCreate) {
             DataStore.rulesFirstCreate = true
-            DataStore.rulesVersion = 5
+            DataStore.rulesVersion = 6
             createDefaultRules()
             rules = SagerDatabase.rulesDao.allRules()
         } else {

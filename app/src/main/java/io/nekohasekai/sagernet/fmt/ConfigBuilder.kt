@@ -792,9 +792,9 @@ fun buildConfig(
                     disable_cache = true
                 })
             }
-            // avoid loopback
+            // avoid loopback (only direct / bypass outbounds use direct DNS)
             dns.rules.add(0, DNSRule_DefaultOptions().apply {
-                outbound = mutableListOf("any")
+                outbound = mutableListOf(TAG_DIRECT, TAG_BYPASS)
                 server = "dns-direct"
             })
             // force bypass (always top DNS rule)
