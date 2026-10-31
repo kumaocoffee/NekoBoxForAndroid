@@ -1676,6 +1676,9 @@ class ConfigurationFragment @JvmOverloads constructor(
 
                 removeButton.setOnClickListener {
                     adapter?.let {
+                        if (DataStore.serviceState.canStop && (proxyEntity.id == DataStore.selectedProxy || proxyEntity.id == DataStore.currentProfile)) {
+                            SagerNet.stopService()
+                        }
                         val index = it.configurationIdList.indexOf(proxyEntity.id)
                         it.remove(index)
                         undoManager.remove(index to proxyEntity)
@@ -1697,8 +1700,8 @@ class ConfigurationFragment @JvmOverloads constructor(
                         selected && DataStore.serviceState.started && DataStore.currentProfile == proxyEntity.id
                     onMainDispatcher {
                         if (::entity.isInitialized && entity.id == proxyEntity.id) {
-                            editButton.isEnabled = !started
-                            removeButton.isEnabled = !started
+                            editButton.isEnabled = true
+                            removeButton.isEnabled = true
                             selectedView.visibility = if (selected) View.VISIBLE else View.INVISIBLE
                         }
                     }

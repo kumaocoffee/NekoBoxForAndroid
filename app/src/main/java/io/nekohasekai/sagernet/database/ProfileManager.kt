@@ -2,6 +2,7 @@ package io.nekohasekai.sagernet.database
 
 import android.database.sqlite.SQLiteCantOpenDatabaseException
 import io.nekohasekai.sagernet.R
+import io.nekohasekai.sagernet.SagerNet
 import io.nekohasekai.sagernet.aidl.TrafficData
 import io.nekohasekai.sagernet.fmt.AbstractBean
 import io.nekohasekai.sagernet.ktx.Logs
@@ -98,6 +99,9 @@ object ProfileManager {
     }
 
     suspend fun deleteProfile2(groupId: Long, profileId: Long) {
+        if (DataStore.serviceState.canStop && (DataStore.selectedProxy == profileId || DataStore.currentProfile == profileId)) {
+            SagerNet.stopService()
+        }
         if (SagerDatabase.proxyDao.deleteById(profileId) == 0) return
         if (DataStore.selectedProxy == profileId) {
             DataStore.selectedProxy = 0L
@@ -105,6 +109,9 @@ object ProfileManager {
     }
 
     suspend fun deleteProfile(groupId: Long, profileId: Long) {
+        if (DataStore.serviceState.canStop && (DataStore.selectedProxy == profileId || DataStore.currentProfile == profileId)) {
+            SagerNet.stopService()
+        }
         if (SagerDatabase.proxyDao.deleteById(profileId) == 0) return
         if (DataStore.selectedProxy == profileId) {
             DataStore.selectedProxy = 0L
@@ -200,6 +207,13 @@ object ProfileManager {
         "com.google.android.gms"
     )
 
+    val TELEGRAM_PACKAGES = setOf(
+        "org.telegram.messenger",
+        "org.telegram.plus",
+        "org.thunderdog.challegram",
+        "nekox.messenger"
+    )
+
     private suspend fun createDefaultRules() {
         val isZh = Locale.getDefault().language == "zh"
 
@@ -232,7 +246,18 @@ object ProfileManager {
                 enabled = true
             ), false
         )
-        // 4. 中国 域名规则
+        // 4. ✈️ Telegram
+        createRule(
+            RuleEntity(
+                name = if (isZh) "✈️ Telegram" else "✈️ Telegram",
+                domains = "geosite:telegram",
+                ip = "geoip:telegram",
+                packages = TELEGRAM_PACKAGES,
+                outbound = 0,
+                enabled = true
+            ), false
+        )
+        // 5. 中国 域名规则
         createRule(
             RuleEntity(
                 name = if (isZh) "中国 域名规则" else "Bypass CN Domains",
@@ -241,7 +266,7 @@ object ProfileManager {
                 enabled = true
             ), false
         )
-        // 5. 中国 IP 规则
+        // 6. 中国 IP 规则
         createRule(
             RuleEntity(
                 name = if (isZh) "中国 IP 规则" else "Bypass CN IP",
@@ -250,7 +275,7 @@ object ProfileManager {
                 enabled = true
             ), false
         )
-        // 6. 🌍 国外媒体与GFW
+        // 7. 🌍 国外媒体与GFW
         createRule(
             RuleEntity(
                 name = if (isZh) "🌍 国外媒体与GFW" else "🌍 Global Media & GFW",
@@ -262,15 +287,14 @@ object ProfileManager {
     }
 
     suspend fun checkRulesMigration() {
-        if (DataStore.rulesVersion < 4) {
-            DataStore.rulesVersion = 4
+        if (DataStore.rulesVersion < 5) {
+            DataStore.rulesVersion = 5
             val rules = SagerDatabase.rulesDao.allRules()
             if (rules.isEmpty()) return
 
-            // 1. 删除 OpenAI、Telegram、哔哩哔哩、微软服务等不需要的分流规则
+            // 1. 删除 OpenAI、哔哩哔哩、微软服务等不需要的分流规则
             val toDelete = rules.filter {
                 it.domains.contains("geosite:openai") ||
-                it.domains.contains("geosite:telegram") ||
                 it.domains.contains("geosite:bilibili") ||
                 it.domains.contains("geosite:microsoft")
             }
@@ -278,7 +302,7 @@ object ProfileManager {
                 SagerDatabase.rulesDao.deleteRules(toDelete)
             }
 
-            // 2. 重新排列保留的 6 项规则，并按截图顺序严格编号对齐
+            // 2. 重新排列保留的规则，并按顺序严格编号对齐
             val remaining = SagerDatabase.rulesDao.allRules()
             val isZh = Locale.getDefault().language == "zh"
 
@@ -288,6 +312,8 @@ object ProfileManager {
                 ?: createRule(RuleEntity(name = if (isZh) "屏蔽广告" else "Block Ads", domains = "geosite:category-ads-all", outbound = -2, enabled = true), false)
             val googleRule = remaining.find { (it.domains.contains("googlevideo.com") || it.packages.contains("com.android.vending") || it.domains.contains("googleapis.cn")) && it.outbound == 0L }
                 ?: createRule(RuleEntity(name = if (isZh) "📹 油管与谷歌生态" else "📹 YouTube & Google", domains = GOOGLE_PLAY_DOMAINS, packages = GOOGLE_PLAY_PACKAGES, outbound = 0, enabled = true), false)
+            val telegramRule = remaining.find { (it.domains.contains("geosite:telegram") || it.ip.contains("geoip:telegram") || it.packages.contains("org.telegram.messenger")) && it.outbound == 0L }
+                ?: createRule(RuleEntity(name = if (isZh) "✈️ Telegram" else "✈️ Telegram", domains = "geosite:telegram", ip = "geoip:telegram", packages = TELEGRAM_PACKAGES, outbound = 0, enabled = true), false)
             val cnDomainRule = remaining.find { it.domains.contains("geosite:cn") && it.outbound == -1L }
                 ?: createRule(RuleEntity(name = if (isZh) "中国 域名规则" else "Bypass CN Domains", domains = "geosite:cn", outbound = -1, enabled = true), false)
             val cnIpRule = remaining.find { it.ip.contains("geoip:cn") && it.outbound == -1L }
@@ -295,7 +321,7 @@ object ProfileManager {
             val gfwRule = remaining.find { it.domains.contains("geosite:geolocation-!cn") && it.outbound == 0L }
                 ?: createRule(RuleEntity(name = if (isZh) "🌍 国外媒体与GFW" else "🌍 Global Media & GFW", domains = "geosite:geolocation-!cn", outbound = 0, enabled = true), false)
 
-            val orderedList = listOf(quicRule, adsRule, googleRule, cnDomainRule, cnIpRule, gfwRule)
+            val orderedList = listOf(quicRule, adsRule, googleRule, telegramRule, cnDomainRule, cnIpRule, gfwRule)
             orderedList.forEachIndexed { index, rule ->
                 rule.userOrder = (index + 1).toLong()
                 rule.enabled = true
@@ -307,12 +333,18 @@ object ProfileManager {
                         rule.domains = GOOGLE_PLAY_DOMAINS
                         rule.packages = GOOGLE_PLAY_PACKAGES
                     }
-                    3 -> rule.name = if (isZh) "中国 域名规则" else "Bypass CN Domains"
-                    4 -> {
+                    3 -> {
+                        rule.name = if (isZh) "✈️ Telegram" else "✈️ Telegram"
+                        rule.domains = "geosite:telegram"
+                        rule.ip = "geoip:telegram"
+                        rule.packages = TELEGRAM_PACKAGES
+                    }
+                    4 -> rule.name = if (isZh) "中国 域名规则" else "Bypass CN Domains"
+                    5 -> {
                         rule.name = if (isZh) "中国 IP 规则" else "Bypass CN IP"
                         rule.ip = "geoip:cn"
                     }
-                    5 -> rule.name = if (isZh) "🌍 国外媒体与GFW" else "🌍 Global Media & GFW"
+                    6 -> rule.name = if (isZh) "🌍 国外媒体与GFW" else "🌍 Global Media & GFW"
                 }
                 SagerDatabase.rulesDao.updateRule(rule)
             }
@@ -323,7 +355,7 @@ object ProfileManager {
         var rules = SagerDatabase.rulesDao.allRules()
         if (rules.isEmpty() && !DataStore.rulesFirstCreate) {
             DataStore.rulesFirstCreate = true
-            DataStore.rulesVersion = 4
+            DataStore.rulesVersion = 5
             createDefaultRules()
             rules = SagerDatabase.rulesDao.allRules()
         } else {

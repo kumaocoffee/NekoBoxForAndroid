@@ -141,10 +141,12 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
                 finish()
                 return
             }
-            if (proxyEntity!!.id == DataStore.selectedProxy) {
-                SagerNet.stopService()
-            }
+            val isCurrentRunning = DataStore.serviceState.canStop &&
+                    (proxyEntity!!.id == DataStore.selectedProxy || proxyEntity!!.id == DataStore.currentProfile)
             ProfileManager.updateProfile(proxyEntity!!.apply { (requireBean() as T).serialize() })
+            if (isCurrentRunning) {
+                SagerNet.reloadService(forceRestart = true)
+            }
         }
         finish()
 

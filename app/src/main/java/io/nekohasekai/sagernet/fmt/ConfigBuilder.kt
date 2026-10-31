@@ -257,6 +257,7 @@ fun buildConfig(
                 when (ipv6Mode) {
                     IPv6Mode.DISABLE -> {
                         inet4_address = listOf(VpnService.PRIVATE_VLAN4_CLIENT + "/28")
+                        inet6_address = listOf(VpnService.PRIVATE_VLAN6_CLIENT + "/126")
                     }
 
                     IPv6Mode.ONLY -> {
@@ -740,6 +741,12 @@ fun buildConfig(
         if (forTest) {
             dns.rules = listOf()
         } else {
+            if (ipv6Mode == IPv6Mode.DISABLE) {
+                route.rules.add(0, Rule_DefaultOptions().apply {
+                    ip_version = 6
+                    action = "reject"
+                })
+            }
             // WebRTC STUN leak prevention: block UDP on STUN ports 3478 and 5349
             route.rules.add(0, Rule_DefaultOptions().apply {
                 network = listOf("udp")

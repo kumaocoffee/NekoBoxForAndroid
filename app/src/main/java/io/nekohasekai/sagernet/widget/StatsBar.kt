@@ -41,6 +41,8 @@ class StatsBar @JvmOverloads constructor(
     private lateinit var ipContainer: View
     private lateinit var behavior: YourBehavior
     private var ipJob: Job? = null
+    private var testDebounceJob: Job? = null
+    private var testJob: Job? = null
 
     var allowShow = true
 
@@ -116,12 +118,13 @@ class StatsBar @JvmOverloads constructor(
         return String(Character.toChars(firstChar)) + String(Character.toChars(secondChar))
     }
 
-    fun fetchIpAndLocation() {
+    @JvmOverloads
+    fun fetchIpAndLocation(reset: Boolean = false) {
         val activity = context as? MainActivity ?: return
         initViews()
         ipJob?.cancel()
 
-        if (ipText.text.isNullOrBlank()) {
+        if (reset || ipText.text.isNullOrBlank()) {
             ipText.text = "... "
             locationText.text = context.getString(R.string.connecting)
         }
@@ -183,6 +186,28 @@ class StatsBar @JvmOverloads constructor(
         ipContainer.isVisible = false
     }
 
+    fun resetAndTestConnection() {
+        if (!DataStore.serviceState.connected) return
+        val activity = context as? MainActivity ?: return
+        initViews()
+        ipJob?.cancel()
+        testJob?.cancel()
+        testDebounceJob?.cancel()
+
+        ipText.text = "... "
+        locationText.text = context.getString(R.string.connecting)
+        ipContainer.isVisible = true
+        setStatus(app.getText(R.string.connection_test_testing))
+        isEnabled = false
+
+        testDebounceJob = activity.lifecycleScope.launch(Dispatchers.Main) {
+            delay(300L)
+            if (DataStore.serviceState.connected) {
+                testConnection()
+            }
+        }
+    }
+
     fun changeState(state: BaseService.State) {
         val activity = context as MainActivity
         fun postWhenStarted(what: () -> Unit) = activity.lifecycleScope.launch(Dispatchers.Main) {
@@ -192,10 +217,11 @@ class StatsBar @JvmOverloads constructor(
         if ((state == BaseService.State.Connected).also { hideOnScroll = it }) {
             postWhenStarted {
                 if (allowShow) performShow()
-                setStatus(app.getText(R.string.vpn_connected))
+                resetAndTestConnection()
             }
-            fetchIpAndLocation()
         } else {
+            testDebounceJob?.cancel()
+            testJob?.cancel()
             postWhenStarted {
                 performHide()
             }
@@ -229,11 +255,13 @@ class StatsBar @JvmOverloads constructor(
     }
 
     fun testConnection() {
-        val activity = context as MainActivity
+        val activity = context as? MainActivity ?: return
+        if (!DataStore.serviceState.connected) return
+        testJob?.cancel()
         isEnabled = false
         setStatus(app.getText(R.string.connection_test_testing))
-        fetchIpAndLocation()
-        runOnDefaultDispatcher {
+        fetchIpAndLocation(reset = true)
+        testJob = activity.lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val elapsed = activity.urlTest()
                 val selectedId = DataStore.selectedProxy
@@ -243,7 +271,7 @@ class StatsBar @JvmOverloads constructor(
                     profile.ping = elapsed
                     ProfileManager.updateProfile(profile)
                 }
-                onMainDispatcher {
+                withContext(Dispatchers.Main) {
                     isEnabled = true
                     setStatus(
                         app.getString(
@@ -265,15 +293,16 @@ class StatsBar @JvmOverloads constructor(
                     profile.error = e.readableMessage
                     ProfileManager.updateProfile(profile)
                 }
-                onMainDispatcher {
+                withContext(Dispatchers.Main) {
                     isEnabled = true
-                    setStatus(app.getText(R.string.connection_test_testing))
-
-                    activity.snackbar(
-                        app.getString(
-                            R.string.connection_test_error, e.readableMessage
-                        )
-                    ).show()
+                    val err = e.readableMessage
+                    val isTimeout = err.lowercase().contains("timeout") ||
+                            err.lowercase().contains("deadline") ||
+                            err == app.getString(R.string.connection_test_timeout)
+                    setStatus(
+                        if (isTimeout) app.getString(R.string.connection_test_timeout)
+                        else app.getString(R.string.connection_test_error, err)
+                    )
                 }
             }
         }

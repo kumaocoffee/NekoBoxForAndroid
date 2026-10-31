@@ -99,9 +99,7 @@ class VpnService : BaseVpnService(),
 
         // address
         builder.addAddress(PRIVATE_VLAN4_CLIENT, 30)
-        if (ipv6Mode != IPv6Mode.DISABLE) {
-            builder.addAddress(PRIVATE_VLAN6_CLIENT, 126)
-        }
+        builder.addAddress(PRIVATE_VLAN6_CLIENT, 126)
         builder.addDnsServer(PRIVATE_VLAN4_ROUTER)
 
         // route
@@ -113,14 +111,10 @@ class VpnService : BaseVpnService(),
             builder.addRoute(PRIVATE_VLAN4_ROUTER, 32)
             builder.addRoute(FAKEDNS_VLAN4_CLIENT, 15)
             // https://issuetracker.google.com/issues/149636790
-            if (ipv6Mode != IPv6Mode.DISABLE) {
-                builder.addRoute("2000::", 3)
-            }
+            builder.addRoute("2000::", 3)
         } else {
             builder.addRoute("0.0.0.0", 0)
-            if (ipv6Mode != IPv6Mode.DISABLE) {
-                builder.addRoute("::", 0)
-            }
+            builder.addRoute("::", 0)
         }
 
         updateUnderlyingNetwork(builder)
