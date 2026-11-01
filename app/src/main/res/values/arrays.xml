@@ -442,8 +442,6 @@
     </string-array>
 
     <string-array name="mtu_select">
-        <item>1280</item>
-        <item>1400</item>
         <item>1500</item>
     </string-array>
 

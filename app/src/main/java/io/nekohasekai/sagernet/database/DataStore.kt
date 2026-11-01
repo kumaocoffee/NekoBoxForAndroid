@@ -35,6 +35,7 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var currentProfile by configurationStore.long(Key.PROFILE_CURRENT)
 
     var selectedProxy by configurationStore.long(Key.PROFILE_ID)
+    var lastSelectedProxy by configurationStore.long("lastSelectedProxy") { 0L }
     var selectedGroup by configurationStore.long(Key.PROFILE_GROUP) { currentGroupId() } // "ungrouped" group id = 1
 
     // only in bg process
@@ -111,7 +112,7 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var trafficSniffing by configurationStore.stringToInt(Key.TRAFFIC_SNIFFING) { 1 }
     var resolveDestination by configurationStore.boolean(Key.RESOLVE_DESTINATION)
 
-    var mtu by configurationStore.stringToInt(Key.MTU) { 1280 }
+    var mtu by configurationStore.stringToInt(Key.MTU) { 1500 }
 
     var bypassLan by configurationStore.boolean(Key.BYPASS_LAN)
     var bypassLanInCore by configurationStore.boolean(Key.BYPASS_LAN_IN_CORE)
@@ -143,8 +144,9 @@ object DataStore : OnPreferenceDataStoreChangeListener {
         if (configurationStore.getString(Key.MIXED_PORT) == null) {
             mixedPort = mixedPort
         }
-        if (configurationStore.getString(Key.MTU) == "9000") {
-            configurationStore.putString(Key.MTU, "1280")
+        val currentMtu = configurationStore.getString(Key.MTU)
+        if (currentMtu == null || currentMtu in listOf("1280", "1400", "9000")) {
+            configurationStore.putString(Key.MTU, "1500")
         }
         if (configurationStore.getString(Key.TUN_IMPLEMENTATION) == null) {
             tunImplementation = TunImplementation.MIXED

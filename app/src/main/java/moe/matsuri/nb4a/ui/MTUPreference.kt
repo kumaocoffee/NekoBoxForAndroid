@@ -20,7 +20,7 @@ class MTUPreference
     init {
         setSummaryProvider {
             val v = value
-            if (v.isNullOrEmpty()) "1280" else v
+            if (v.isNullOrEmpty()) "1500" else v
         }
     }
 
@@ -37,29 +37,25 @@ class MTUPreference
     }
 
     private fun showSelectionDialog() {
-        val presetValues = arrayOf("1280", "1400", "1500")
+        val presetValues = arrayOf("1500")
         val customLabel = context.getString(R.string.custom)
         val displayItems = arrayOf(
-            "1280",
-            "1400",
             "1500",
             "$customLabel..."
         )
 
-        val currentVal = value ?: "1280"
+        val currentVal = value ?: "1500"
         val selectedIndex = when (currentVal) {
-            "1280" -> 0
-            "1400" -> 1
-            "1500" -> 2
-            else -> 3
+            "1500" -> 0
+            else -> 1
         }
 
         MaterialAlertDialogBuilder(context)
             .setTitle(title ?: "MTU")
             .setSingleChoiceItems(displayItems, selectedIndex) { dialog, which ->
                 dialog.dismiss()
-                if (which in 0..2) {
-                    val newVal = presetValues[which]
+                if (which == 0) {
+                    val newVal = presetValues[0]
                     if (callChangeListener(newVal)) {
                         value = newVal
                     }
@@ -72,7 +68,7 @@ class MTUPreference
     }
 
     private fun showCustomInputDialog() {
-        val currentVal = value ?: "1280"
+        val currentVal = value ?: "1500"
         val container = FrameLayout(context)
         val paddingHorizontal = (24 * context.resources.displayMetrics.density).toInt()
         val paddingTop = (8 * context.resources.displayMetrics.density).toInt()

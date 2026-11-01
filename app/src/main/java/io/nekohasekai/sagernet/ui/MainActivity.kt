@@ -89,9 +89,13 @@ class MainActivity : ThemedActivity(),
         }
 
         binding.fab.setOnClickListener {
-            if (DataStore.serviceState.canStop) SagerNet.stopService() else connect.launch(
-                null
-            )
+            if (DataStore.serviceState.canStop) {
+                userManuallyStopped = true
+                SagerNet.stopService()
+            } else {
+                userManuallyStopped = false
+                connect.launch(null)
+            }
         }
         binding.stats.setOnClickListener { if (DataStore.serviceState.connected) binding.stats.testConnection() }
 
@@ -359,6 +363,7 @@ class MainActivity : ThemedActivity(),
     }
 
     private var autoConnectTriggered = false
+    private var userManuallyStopped = false
 
     val connection = SagerConnection(SagerConnection.CONNECTION_ID_MAIN_ACTIVITY_FOREGROUND, true)
     override fun onServiceConnected(service: ISagerNetService) {
@@ -370,9 +375,36 @@ class MainActivity : ThemedActivity(),
         changeState(state)
         if (!autoConnectTriggered) {
             autoConnectTriggered = true
-            if (DataStore.persistAcrossReboot && DataStore.selectedProxy > 0 && !state.started) {
-                connect.launch(null)
+            triggerAutoConnectIfNeeded()
+        }
+    }
+
+    private fun triggerAutoConnectIfNeeded() {
+        if (!DataStore.persistAcrossReboot || userManuallyStopped) return
+        if (DataStore.serviceState.started) return
+
+        var target = DataStore.selectedProxy
+        if (target <= 0L) {
+            target = DataStore.lastSelectedProxy
+            if (target <= 0L) target = DataStore.currentProfile
+            if (target > 0L) {
+                runOnDefaultDispatcher {
+                    val entity = SagerDatabase.proxyDao.getById(target)
+                    if (entity != null) {
+                        DataStore.selectedProxy = target
+                        runOnMainDispatcher {
+                            if (!DataStore.serviceState.started && !userManuallyStopped) {
+                                connect.launch(null)
+                            }
+                        }
+                    }
+                }
+                return
             }
+        }
+
+        if (target > 0L) {
+            connect.launch(null)
         }
     }
 
@@ -403,7 +435,9 @@ class MainActivity : ThemedActivity(),
         val old = DataStore.selectedProxy
         if (old == id) return
         DataStore.selectedProxy = id
+        DataStore.lastSelectedProxy = id
         DataStore.currentProfile = id
+        userManuallyStopped = false
         runOnDefaultDispatcher {
             ProfileManager.postUpdate(old, true)
             ProfileManager.postUpdate(id, true)
@@ -414,6 +448,9 @@ class MainActivity : ThemedActivity(),
         when (key) {
             Key.PROFILE_ID -> {
                 val current = DataStore.selectedProxy
+                if (current > 0L) {
+                    DataStore.lastSelectedProxy = current
+                }
                 if (current != lastSelectedProxy) {
                     lastSelectedProxy = current
                     if (DataStore.serviceState.connected) {
@@ -439,8 +476,16 @@ class MainActivity : ThemedActivity(),
         super.onStart()
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (autoConnectTriggered) {
+            triggerAutoConnectIfNeeded()
+        }
+    }
+
     override fun onStop() {
         connection.updateConnectionId(SagerConnection.CONNECTION_ID_MAIN_ACTIVITY_BACKGROUND)
+        userManuallyStopped = false
         super.onStop()
     }
 

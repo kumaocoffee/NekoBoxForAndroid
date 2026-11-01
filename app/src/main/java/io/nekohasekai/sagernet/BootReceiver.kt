@@ -32,10 +32,19 @@ class BootReceiver : BroadcastReceiver() {
             return
         }
 
+        var targetProxy = DataStore.selectedProxy
+        if (targetProxy <= 0L) {
+            targetProxy = DataStore.lastSelectedProxy
+            if (targetProxy <= 0L) targetProxy = DataStore.currentProfile
+            if (targetProxy > 0L) {
+                DataStore.selectedProxy = targetProxy
+            }
+        }
+
         val doStart = when (intent.action) {
             Intent.ACTION_LOCKED_BOOT_COMPLETED -> false // DataStore.directBootAware
             else -> Build.VERSION.SDK_INT < 24 || SagerNet.user.isUserUnlocked
-        } && DataStore.selectedProxy > 0
+        } && targetProxy > 0
 
         if (doStart) SagerNet.startService()
     }
