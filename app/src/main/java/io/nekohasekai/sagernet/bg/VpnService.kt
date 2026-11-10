@@ -97,13 +97,14 @@ class VpnService : BaseVpnService(),
             .setMtu(DataStore.mtu)
         val ipv6Mode = DataStore.ipv6Mode
 
-        // address
+        // address & DNS
         if (ipv6Mode != IPv6Mode.ONLY) {
             builder.addAddress(PRIVATE_VLAN4_CLIENT, 30)
-        }
-        builder.addAddress(PRIVATE_VLAN6_CLIENT, 126)
-        if (ipv6Mode != IPv6Mode.ONLY) {
             builder.addDnsServer(PRIVATE_VLAN4_ROUTER)
+        }
+        if (ipv6Mode != IPv6Mode.DISABLE) {
+            builder.addAddress(PRIVATE_VLAN6_CLIENT, 126)
+            builder.addDnsServer(PRIVATE_VLAN6_ROUTER)
         }
 
         // route
@@ -116,13 +117,17 @@ class VpnService : BaseVpnService(),
                 builder.addRoute(PRIVATE_VLAN4_ROUTER, 32)
                 builder.addRoute(FAKEDNS_VLAN4_CLIENT, 15)
             }
-            // https://issuetracker.google.com/issues/149636790
-            builder.addRoute("2000::", 3)
+            if (ipv6Mode != IPv6Mode.DISABLE) {
+                // https://issuetracker.google.com/issues/149636790
+                builder.addRoute("2000::", 3)
+            }
         } else {
             if (ipv6Mode != IPv6Mode.ONLY) {
                 builder.addRoute("0.0.0.0", 0)
             }
-            builder.addRoute("::", 0)
+            if (ipv6Mode != IPv6Mode.DISABLE) {
+                builder.addRoute("::", 0)
+            }
         }
 
         updateUnderlyingNetwork(builder)

@@ -80,7 +80,7 @@ class MTUPreference
             inputType = EditorInfo.TYPE_CLASS_NUMBER
             setText(currentVal)
             setSelection(text.length)
-            hint = "1000 - 10000"
+            hint = "1280 - 10000"
         }
         container.addView(editText)
 
@@ -91,7 +91,7 @@ class MTUPreference
             .setPositiveButton(android.R.string.ok) { _, _ ->
                 val input = editText.text.toString().trim()
                 val mtu = input.toIntOrNull()
-                if (mtu != null && mtu in 1000..10000) {
+                if (mtu != null && mtu in 1280..10000) {
                     val newVal = mtu.toString()
                     if (callChangeListener(newVal)) {
                         value = newVal

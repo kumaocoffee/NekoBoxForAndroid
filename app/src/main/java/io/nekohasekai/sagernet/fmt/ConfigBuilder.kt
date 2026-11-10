@@ -256,7 +256,7 @@ fun buildConfig(
                 sniff_override_destination = needSniffOverride
                 when (ipv6Mode) {
                     IPv6Mode.DISABLE -> {
-                        inet4_address = listOf(VpnService.PRIVATE_VLAN4_CLIENT + "/28")
+                        inet4_address = listOf(VpnService.PRIVATE_VLAN4_CLIENT + "/30")
                     }
 
                     IPv6Mode.ONLY -> {
@@ -264,7 +264,7 @@ fun buildConfig(
                     }
 
                     else -> {
-                        inet4_address = listOf(VpnService.PRIVATE_VLAN4_CLIENT + "/28")
+                        inet4_address = listOf(VpnService.PRIVATE_VLAN4_CLIENT + "/30")
                         inet6_address = listOf(VpnService.PRIVATE_VLAN6_CLIENT + "/126")
                     }
                 }
@@ -621,6 +621,16 @@ fun buildConfig(
                         userDNSRuleList += makeDnsRuleObj().apply {
                             server = "dns-block"
                             disable_cache = true
+                        }
+                    }
+
+                    else -> {
+                        if (useFakeDns) userDNSRuleList += makeDnsRuleObj().apply {
+                            server = "dns-fake"
+                            inbound = listOf("tun-in", TAG_MIXED)
+                        }
+                        userDNSRuleList += makeDnsRuleObj().apply {
+                            server = "dns-remote"
                         }
                     }
                 }
