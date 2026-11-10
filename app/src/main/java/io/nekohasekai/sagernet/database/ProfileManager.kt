@@ -112,6 +112,11 @@ object ProfileManager {
         if (DataStore.currentProfile == profileId) {
             DataStore.currentProfile = 0L
         }
+        val affectedRules = SagerDatabase.rulesDao.allRules().filter { it.outbound == profileId }
+        for (rule in affectedRules) {
+            rule.outbound = 0L
+            SagerDatabase.rulesDao.updateRule(rule)
+        }
     }
 
     suspend fun deleteProfile(groupId: Long, profileId: Long) {
@@ -127,6 +132,11 @@ object ProfileManager {
         }
         if (DataStore.currentProfile == profileId) {
             DataStore.currentProfile = 0L
+        }
+        val affectedRules = SagerDatabase.rulesDao.allRules().filter { it.outbound == profileId }
+        for (rule in affectedRules) {
+            rule.outbound = 0L
+            SagerDatabase.rulesDao.updateRule(rule)
         }
         iterator { onRemoved(groupId, profileId) }
         if (SagerDatabase.proxyDao.countByGroup(groupId) > 1) {
@@ -307,7 +317,7 @@ object ProfileManager {
                 ?: createRule(RuleEntity(name = if (isZh) "屏蔽 QUIC" else "Block QUIC", port = "443", network = "udp", outbound = -2, enabled = true), false)
             val adsRule = remaining.find { it.domains.contains("geosite:category-ads-all") && it.outbound == -2L }
                 ?: createRule(RuleEntity(name = if (isZh) "屏蔽广告" else "Block Ads", domains = "geosite:category-ads-all", outbound = -2, enabled = true), false)
-            val googleRule = remaining.find { (it.domains.contains("googlevideo.com") || it.packages.contains("com.android.vending") || it.domains.contains("googleapis.cn") || it.name.contains("谷歌") || it.name.contains("Google")) && it.outbound == 0L }
+            val googleRule = remaining.find { (it.domains.contains("googlevideo.com") || it.packages.contains("com.android.vending") || it.domains.contains("googleapis.cn")) && it.outbound == 0L }
                 ?: createRule(RuleEntity(name = if (isZh) "谷歌商店" else "Google Play", domains = GOOGLE_PLAY_DOMAINS, packages = GOOGLE_PLAY_PACKAGES, outbound = 0, enabled = true), false)
             val gfwRule = remaining.find { it.domains.contains("geosite:geolocation-!cn") && it.outbound == 0L }
                 ?: createRule(RuleEntity(name = if (isZh) "🌍 国外媒体与GFW" else "🌍 Global Media & GFW", domains = "geosite:geolocation-!cn", outbound = 0, enabled = true), false)
@@ -336,6 +346,15 @@ object ProfileManager {
                     }
                 }
                 SagerDatabase.rulesDao.updateRule(rule)
+            }
+
+            // 3. 对用户可能存在的自定义规则按原有顺序紧凑向后编号，消除重叠冲突
+            val systemRuleIds = orderedList.map { it.id }.toSet()
+            val customRules = remaining.filter { it.id !in systemRuleIds }.sortedBy { it.userOrder }
+            var currentOrder = orderedList.size + 1L
+            for (custom in customRules) {
+                custom.userOrder = currentOrder++
+                SagerDatabase.rulesDao.updateRule(custom)
             }
         }
     }

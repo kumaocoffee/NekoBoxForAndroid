@@ -475,9 +475,6 @@ class MainActivity : ThemedActivity(),
 
     override fun onResume() {
         super.onResume()
-        if (autoConnectTriggered) {
-            triggerAutoConnectIfNeeded()
-        }
     }
 
     override fun onStop() {
