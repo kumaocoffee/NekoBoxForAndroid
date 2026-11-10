@@ -180,6 +180,7 @@ class BaseService {
         fun reload(forceRestart: Boolean = false) {
             if (DataStore.selectedProxy == 0L) {
                 stopRunner(false, (this as Context).getString(R.string.profile_empty))
+                return
             }
             if (!forceRestart && canReloadSelector()) {
                 val ent = SagerDatabase.proxyDao.getById(DataStore.selectedProxy)

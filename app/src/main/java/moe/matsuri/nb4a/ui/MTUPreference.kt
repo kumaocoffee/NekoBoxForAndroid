@@ -37,25 +37,27 @@ class MTUPreference
     }
 
     private fun showSelectionDialog() {
-        val presetValues = arrayOf("1500")
+        val presetValues = arrayOf("1280", "1500")
         val customLabel = context.getString(R.string.custom)
         val displayItems = arrayOf(
+            "1280",
             "1500",
             "$customLabel..."
         )
 
         val currentVal = value ?: "1500"
         val selectedIndex = when (currentVal) {
-            "1500" -> 0
-            else -> 1
+            "1280" -> 0
+            "1500" -> 1
+            else -> 2
         }
 
         MaterialAlertDialogBuilder(context)
             .setTitle(title ?: "MTU")
             .setSingleChoiceItems(displayItems, selectedIndex) { dialog, which ->
                 dialog.dismiss()
-                if (which == 0) {
-                    val newVal = presetValues[0]
+                if (which in 0..1) {
+                    val newVal = presetValues[which]
                     if (callChangeListener(newVal)) {
                         value = newVal
                     }

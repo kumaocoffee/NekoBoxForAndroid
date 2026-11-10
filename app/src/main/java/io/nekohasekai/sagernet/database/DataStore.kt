@@ -145,7 +145,7 @@ object DataStore : OnPreferenceDataStoreChangeListener {
             mixedPort = mixedPort
         }
         val currentMtu = configurationStore.getString(Key.MTU)
-        if (currentMtu == null || currentMtu in listOf("1280", "1400", "9000")) {
+        if (currentMtu == null) {
             configurationStore.putString(Key.MTU, "1500")
         }
         if (configurationStore.getString(Key.TUN_IMPLEMENTATION) == null) {

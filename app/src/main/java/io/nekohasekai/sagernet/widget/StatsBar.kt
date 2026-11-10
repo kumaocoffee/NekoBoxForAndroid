@@ -209,7 +209,7 @@ class StatsBar @JvmOverloads constructor(
     }
 
     fun changeState(state: BaseService.State) {
-        val activity = context as MainActivity
+        val activity = (context as? MainActivity) ?: return
         fun postWhenStarted(what: () -> Unit) = activity.lifecycleScope.launch(Dispatchers.Main) {
             delay(100L)
             activity.whenStarted { what() }
@@ -257,6 +257,8 @@ class StatsBar @JvmOverloads constructor(
     fun testConnection() {
         val activity = context as? MainActivity ?: return
         if (!DataStore.serviceState.connected) return
+        val targetProxyId = DataStore.selectedProxy
+        if (targetProxyId <= 0L) return
         testJob?.cancel()
         isEnabled = false
         setStatus(app.getText(R.string.connection_test_testing))
@@ -264,45 +266,56 @@ class StatsBar @JvmOverloads constructor(
         testJob = activity.lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val elapsed = activity.urlTest()
-                val selectedId = DataStore.selectedProxy
-                val profile = SagerDatabase.proxyDao.getById(selectedId)
-                if (profile != null) {
-                    profile.status = 1
-                    profile.ping = elapsed
-                    ProfileManager.updateProfile(profile)
+                if (DataStore.selectedProxy == targetProxyId) {
+                    val profile = SagerDatabase.proxyDao.getById(targetProxyId)
+                    if (profile != null) {
+                        profile.status = 1
+                        profile.ping = elapsed
+                        ProfileManager.updateProfile(profile)
+                    }
                 }
                 withContext(Dispatchers.Main) {
-                    isEnabled = true
-                    setStatus(
-                        app.getString(
-                            if (DataStore.connectionTestURL.startsWith("https://")) {
-                                R.string.connection_test_available
-                            } else {
-                                R.string.connection_test_available_http
-                            }, elapsed
+                    if (DataStore.selectedProxy == targetProxyId) {
+                        isEnabled = true
+                        setStatus(
+                            app.getString(
+                                if (DataStore.connectionTestURL.startsWith("https://")) {
+                                    R.string.connection_test_available
+                                } else {
+                                    R.string.connection_test_available_http
+                                }, elapsed
+                            )
                         )
-                    )
+                    }
                 }
 
             } catch (e: Exception) {
                 Logs.w(e.toString())
-                val selectedId = DataStore.selectedProxy
-                val profile = SagerDatabase.proxyDao.getById(selectedId)
-                if (profile != null) {
-                    profile.status = 2
-                    profile.error = e.readableMessage
-                    ProfileManager.updateProfile(profile)
+                val err = e.readableMessage
+                val isNotStarted = err.contains("not started") || err.contains("core not started")
+                if (!isNotStarted && DataStore.selectedProxy == targetProxyId) {
+                    val profile = SagerDatabase.proxyDao.getById(targetProxyId)
+                    if (profile != null) {
+                        profile.status = 2
+                        profile.error = err
+                        ProfileManager.updateProfile(profile)
+                    }
                 }
                 withContext(Dispatchers.Main) {
-                    isEnabled = true
-                    val err = e.readableMessage
-                    val isTimeout = err.lowercase().contains("timeout") ||
-                            err.lowercase().contains("deadline") ||
-                            err == app.getString(R.string.connection_test_timeout)
-                    setStatus(
-                        if (isTimeout) app.getString(R.string.connection_test_timeout)
-                        else app.getString(R.string.connection_test_error, err)
-                    )
+                    if (DataStore.selectedProxy == targetProxyId) {
+                        isEnabled = true
+                        if (isNotStarted) {
+                            setStatus(app.getText(R.string.connecting))
+                        } else {
+                            val isTimeout = err.lowercase().contains("timeout") ||
+                                    err.lowercase().contains("deadline") ||
+                                    err == app.getString(R.string.connection_test_timeout)
+                            setStatus(
+                                if (isTimeout) app.getString(R.string.connection_test_timeout)
+                                else app.getString(R.string.connection_test_error, err)
+                            )
+                        }
+                    }
                 }
             }
         }

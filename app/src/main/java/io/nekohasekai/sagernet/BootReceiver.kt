@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import io.nekohasekai.sagernet.bg.SubscriptionUpdater
 import io.nekohasekai.sagernet.database.DataStore
+import io.nekohasekai.sagernet.database.SagerDatabase
 import io.nekohasekai.sagernet.ktx.app
 import io.nekohasekai.sagernet.ktx.runOnDefaultDispatcher
 
@@ -36,8 +37,17 @@ class BootReceiver : BroadcastReceiver() {
         if (targetProxy <= 0L) {
             targetProxy = DataStore.lastSelectedProxy
             if (targetProxy <= 0L) targetProxy = DataStore.currentProfile
-            if (targetProxy > 0L) {
+        }
+
+        if (targetProxy > 0L) {
+            val exists = SagerDatabase.proxyDao.getById(targetProxy) != null
+            if (exists) {
                 DataStore.selectedProxy = targetProxy
+            } else {
+                targetProxy = 0L
+                DataStore.selectedProxy = 0L
+                DataStore.lastSelectedProxy = 0L
+                DataStore.currentProfile = 0L
             }
         }
 

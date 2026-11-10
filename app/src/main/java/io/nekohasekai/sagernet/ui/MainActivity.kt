@@ -388,24 +388,20 @@ class MainActivity : ThemedActivity(),
         if (target <= 0L) {
             target = DataStore.lastSelectedProxy
             if (target <= 0L) target = DataStore.currentProfile
-            if (target > 0L) {
-                runOnDefaultDispatcher {
-                    val entity = SagerDatabase.proxyDao.getById(target)
-                    if (entity != null) {
-                        DataStore.selectedProxy = target
-                        runOnMainDispatcher {
-                            if (!DataStore.serviceState.started && !userManuallyStopped) {
-                                connect.launch(null)
-                            }
-                        }
-                    }
-                }
-                return
-            }
         }
 
         if (target > 0L) {
-            connect.launch(null)
+            runOnDefaultDispatcher {
+                val entity = SagerDatabase.proxyDao.getById(target)
+                if (entity != null) {
+                    DataStore.selectedProxy = target
+                    runOnMainDispatcher {
+                        if (!DataStore.serviceState.started && !userManuallyStopped) {
+                            connect.launch(null)
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -486,7 +482,6 @@ class MainActivity : ThemedActivity(),
 
     override fun onStop() {
         connection.updateConnectionId(SagerConnection.CONNECTION_ID_MAIN_ACTIVITY_BACKGROUND)
-        userManuallyStopped = false
         super.onStop()
     }
 

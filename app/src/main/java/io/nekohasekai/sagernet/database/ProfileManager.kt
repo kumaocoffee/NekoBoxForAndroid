@@ -106,6 +106,12 @@ object ProfileManager {
         if (DataStore.selectedProxy == profileId) {
             DataStore.selectedProxy = 0L
         }
+        if (DataStore.lastSelectedProxy == profileId) {
+            DataStore.lastSelectedProxy = 0L
+        }
+        if (DataStore.currentProfile == profileId) {
+            DataStore.currentProfile = 0L
+        }
     }
 
     suspend fun deleteProfile(groupId: Long, profileId: Long) {
@@ -115,6 +121,12 @@ object ProfileManager {
         if (SagerDatabase.proxyDao.deleteById(profileId) == 0) return
         if (DataStore.selectedProxy == profileId) {
             DataStore.selectedProxy = 0L
+        }
+        if (DataStore.lastSelectedProxy == profileId) {
+            DataStore.lastSelectedProxy = 0L
+        }
+        if (DataStore.currentProfile == profileId) {
+            DataStore.currentProfile = 0L
         }
         iterator { onRemoved(groupId, profileId) }
         if (SagerDatabase.proxyDao.countByGroup(groupId) > 1) {
@@ -269,14 +281,17 @@ object ProfileManager {
     }
 
     suspend fun checkRulesMigration() {
-        if (DataStore.rulesVersion < 7) {
-            DataStore.rulesVersion = 7
+        if (DataStore.rulesVersion < 8) {
+            DataStore.rulesVersion = 8
             val rules = SagerDatabase.rulesDao.allRules()
             if (rules.isEmpty()) return
 
-            // 1. 删除 OpenAI、哔哩哔哩、微软服务等不需要的分流规则
+            // 1. 删除 OpenAI、Telegram、哔哩哔哩、微软服务等不需要的分流规则
             val toDelete = rules.filter {
                 it.domains.contains("geosite:openai") ||
+                it.domains.contains("geosite:telegram") ||
+                it.ip.contains("91.108.") ||
+                it.packages.contains("org.telegram.messenger") ||
                 it.domains.contains("geosite:bilibili") ||
                 it.domains.contains("geosite:microsoft")
             }
@@ -329,7 +344,7 @@ object ProfileManager {
         var rules = SagerDatabase.rulesDao.allRules()
         if (rules.isEmpty() && !DataStore.rulesFirstCreate) {
             DataStore.rulesFirstCreate = true
-            DataStore.rulesVersion = 7
+            DataStore.rulesVersion = 8
             createDefaultRules()
             rules = SagerDatabase.rulesDao.allRules()
         } else {

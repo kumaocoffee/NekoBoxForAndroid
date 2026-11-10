@@ -280,18 +280,13 @@ class RouteFragment : ToolbarFragment(R.layout.layout_route), Toolbar.OnMenuItem
         }
 
         override fun undo(actions: List<Pair<Int, RuleEntity>>) {
-            for ((index, item) in actions) {
-                if (index in 0..displayedList.size) {
-                    displayedList.add(index, item)
-                    ruleList.add(index, item)
-                    notifyItemInserted(index)
-                } else {
-                    displayedList.add(item)
+            for ((_, item) in actions) {
+                if (!ruleList.any { it.id == item.id }) {
                     ruleList.add(item)
-                    notifyItemInserted(displayedList.size - 1)
                 }
             }
-            updateFilterTabs()
+            ruleList.sortBy { it.userOrder }
+            applyFilter()
         }
 
         override fun commit(actions: List<Pair<Int, RuleEntity>>) {
@@ -358,28 +353,29 @@ class RouteFragment : ToolbarFragment(R.layout.layout_route), Toolbar.OnMenuItem
                 binding.profileName.text = rule.displayName()
 
                 // 3. Outbound Action Pill Badge
+                val isNight = (itemView.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
                 when (rule.outbound) {
                     0L -> {
                         binding.actionBadge.text = "✈️ " + getString(R.string.route_proxy)
                         binding.actionBadge.setBackgroundResource(R.drawable.bg_badge_proxy)
-                        binding.actionBadge.setTextColor(Color.parseColor("#1976D2"))
+                        binding.actionBadge.setTextColor(Color.parseColor(if (isNight) "#64B5F6" else "#1976D2"))
                     }
                     -1L -> {
                         binding.actionBadge.text = "⚡ " + getString(R.string.route_bypass)
                         binding.actionBadge.setBackgroundResource(R.drawable.bg_badge_bypass)
-                        binding.actionBadge.setTextColor(Color.parseColor("#2E7D32"))
+                        binding.actionBadge.setTextColor(Color.parseColor(if (isNight) "#81C784" else "#2E7D32"))
                     }
                     -2L -> {
                         binding.actionBadge.text = "🚫 " + getString(R.string.route_block)
                         binding.actionBadge.setBackgroundResource(R.drawable.bg_badge_block)
-                        binding.actionBadge.setTextColor(Color.parseColor("#D32F2F"))
+                        binding.actionBadge.setTextColor(Color.parseColor(if (isNight) "#E57373" else "#D32F2F"))
                     }
                     else -> {
                         val profileName = ProfileManager.getProfile(rule.outbound)?.displayName()
                             ?: getString(R.string.route_profile)
                         binding.actionBadge.text = "🔀 $profileName"
                         binding.actionBadge.setBackgroundResource(R.drawable.bg_badge_custom)
-                        binding.actionBadge.setTextColor(Color.parseColor("#7B1FA2"))
+                        binding.actionBadge.setTextColor(Color.parseColor(if (isNight) "#BA68C8" else "#7B1FA2"))
                     }
                 }
 
