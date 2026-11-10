@@ -24,6 +24,10 @@ class BootReceiver : BroadcastReceiver() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
+        val isLocked = intent.action == Intent.ACTION_LOCKED_BOOT_COMPLETED
+        val isUnlocked = Build.VERSION.SDK_INT < 24 || SagerNet.user.isUserUnlocked
+        if (isLocked || !isUnlocked) return
+
         runOnDefaultDispatcher {
             SubscriptionUpdater.reconfigureUpdater()
         }
@@ -33,29 +37,24 @@ class BootReceiver : BroadcastReceiver() {
             return
         }
 
-        var targetProxy = DataStore.selectedProxy
-        if (targetProxy <= 0L) {
-            targetProxy = DataStore.lastSelectedProxy
-            if (targetProxy <= 0L) targetProxy = DataStore.currentProfile
-        }
+        runOnDefaultDispatcher {
+            var targetProxy = DataStore.selectedProxy
+            if (targetProxy <= 0L) {
+                targetProxy = DataStore.lastSelectedProxy
+                if (targetProxy <= 0L) targetProxy = DataStore.currentProfile
+            }
 
-        if (targetProxy > 0L) {
-            val exists = SagerDatabase.proxyDao.getById(targetProxy) != null
-            if (exists) {
-                DataStore.selectedProxy = targetProxy
-            } else {
-                targetProxy = 0L
-                DataStore.selectedProxy = 0L
-                DataStore.lastSelectedProxy = 0L
-                DataStore.currentProfile = 0L
+            if (targetProxy > 0L) {
+                val exists = SagerDatabase.proxyDao.getById(targetProxy) != null
+                if (exists) {
+                    DataStore.selectedProxy = targetProxy
+                    SagerNet.startService()
+                } else {
+                    DataStore.selectedProxy = 0L
+                    DataStore.lastSelectedProxy = 0L
+                    DataStore.currentProfile = 0L
+                }
             }
         }
-
-        val doStart = when (intent.action) {
-            Intent.ACTION_LOCKED_BOOT_COMPLETED -> false // DataStore.directBootAware
-            else -> Build.VERSION.SDK_INT < 24 || SagerNet.user.isUserUnlocked
-        } && targetProxy > 0
-
-        if (doStart) SagerNet.startService()
     }
 }

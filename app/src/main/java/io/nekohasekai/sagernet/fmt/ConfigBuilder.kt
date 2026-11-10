@@ -541,11 +541,7 @@ fun buildConfig(
             }
             val uidList = rule.packages.map {
                 if (!isVPN) {
-                    Toast.makeText(
-                        SagerNet.application,
-                        SagerNet.application.getString(R.string.route_need_vpn, rule.displayName()),
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    Logs.w(SagerNet.application.getString(R.string.route_need_vpn, rule.displayName()))
                 }
                 PackageCache[it]?.takeIf { uid -> uid >= 1000 }
             }.toHashSet().filterNotNull()
@@ -641,11 +637,7 @@ fun buildConfig(
 
             if (!ruleObj.checkEmpty()) {
                 if (ruleObj.outbound.isNullOrBlank()) {
-                    Toast.makeText(
-                        SagerNet.application,
-                        "Warning: " + rule.displayName() + ": A non-existent outbound was specified.",
-                        Toast.LENGTH_LONG
-                    ).show()
+                    Logs.w("Warning: " + rule.displayName() + ": A non-existent outbound was specified.")
                 } else {
                     // block 改用新的写法
                     if (ruleObj.outbound == TAG_BLOCK) {

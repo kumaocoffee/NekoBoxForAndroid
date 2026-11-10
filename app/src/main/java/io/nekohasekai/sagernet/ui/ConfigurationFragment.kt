@@ -1392,8 +1392,9 @@ class ConfigurationFragment @JvmOverloads constructor(
                 for ((index, item) in actions) {
                     configurationListView.post {
                         configurationList[item.id] = item
-                        configurationIdList.add(index, item.id)
-                        notifyItemInserted(index)
+                        val targetIndex = index.coerceIn(0, configurationIdList.size)
+                        configurationIdList.add(targetIndex, item.id)
+                        notifyItemInserted(targetIndex)
                     }
                 }
             }
