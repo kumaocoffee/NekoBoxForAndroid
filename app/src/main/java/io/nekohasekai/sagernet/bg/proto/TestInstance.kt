@@ -6,12 +6,12 @@ import io.nekohasekai.sagernet.database.ProxyEntity
 import io.nekohasekai.sagernet.fmt.buildConfig
 import io.nekohasekai.sagernet.ktx.Logs
 import io.nekohasekai.sagernet.ktx.runOnDefaultDispatcher
-import io.nekohasekai.sagernet.ktx.tryResume
-import io.nekohasekai.sagernet.ktx.tryResumeWithException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import libcore.Libcore
 import moe.matsuri.nb4a.net.LocalResolverImpl
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 class TestInstance(profile: ProxyEntity, val link: String, private val timeout: Int) :
     BoxInstance(profile) {
@@ -20,7 +20,9 @@ class TestInstance(profile: ProxyEntity, val link: String, private val timeout: 
         return suspendCancellableCoroutine { c ->
             processes = GuardedProcessPool {
                 Logs.w(it)
-                c.tryResumeWithException(it)
+                if (c.isActive) {
+                    c.resumeWithException(it)
+                }
             }
             val job = runOnDefaultDispatcher {
                 use {
@@ -32,11 +34,11 @@ class TestInstance(profile: ProxyEntity, val link: String, private val timeout: 
                             delay(500)
                         }
                         if (c.isActive) {
-                            c.tryResume(Libcore.urlTest(box, link, timeout))
+                            c.resume(Libcore.urlTest(box, link, timeout))
                         }
                     } catch (e: Exception) {
                         if (c.isActive) {
-                            c.tryResumeWithException(e)
+                            c.resumeWithException(e)
                         }
                     }
                 }
