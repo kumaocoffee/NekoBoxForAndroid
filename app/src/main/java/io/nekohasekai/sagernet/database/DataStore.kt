@@ -144,26 +144,6 @@ object DataStore : OnPreferenceDataStoreChangeListener {
         if (configurationStore.getString(Key.MIXED_PORT) == null) {
             mixedPort = mixedPort
         }
-        val currentMtu = configurationStore.getString(Key.MTU)
-        if (currentMtu == null) {
-            configurationStore.putString(Key.MTU, "1500")
-        }
-        if (configurationStore.getString(Key.TUN_IMPLEMENTATION) == null) {
-            tunImplementation = TunImplementation.MIXED
-        }
-        if (configurationStore.getString(Key.ENABLE_FAKEDNS) == null) {
-            enableFakeDns = true
-        }
-        if (configurationStore.getString(Key.IPV6_MODE) == null) {
-            ipv6Mode = IPv6Mode.DISABLE
-        }
-        val currentRemoteDns = configurationStore.getString(Key.REMOTE_DNS)
-        if (currentRemoteDns == null || currentRemoteDns == "https://dns.google/dns-query") {
-            remoteDns = "https://8.8.8.8/dns-query"
-        }
-        if (configurationStore.getString(Key.ENABLE_DNS_ROUTING) == null) {
-            enableDnsRouting = true
-        }
     }
 
 
