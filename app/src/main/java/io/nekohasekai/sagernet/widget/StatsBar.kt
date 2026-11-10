@@ -139,31 +139,34 @@ class StatsBar @JvmOverloads constructor(
                     instanceFollowRedirects = true
                     setRequestProperty("User-Agent", "NekoBox")
                 }
-                val jsonStr = conn.inputStream.bufferedReader().use { it.readText() }
-                val obj = JSONObject(jsonStr)
-                if (obj.optString("status") == "success") {
-                    val query = obj.optString("query")
-                    val countryCode = obj.optString("countryCode")
-                    val country = obj.optString("country")
-                    val city = obj.optString("city")
-                    val flag = countryCodeToEmoji(countryCode)
-                    val ipDisplay = if (flag.isNotEmpty()) "$flag $query" else query
-                    val locDisplay = if (country.isNotEmpty() && city.isNotEmpty()) {
-                        "$country · $city"
-                    } else {
-                        country.ifEmpty { city }
-                    }
-                    withContext(Dispatchers.Main) {
-                        ipText.text = ipDisplay
-                        locationText.text = locDisplay
-                        ipContainer.isVisible = true
-                    }
-                } else {
-                    withContext(Dispatchers.Main) {
-                        if (ipText.text == "... ") {
-                            ipText.text = "—"
-                            locationText.text = context.getString(R.string.connection_test_error, "")
+                val stream = if (conn.responseCode in 200..299) conn.inputStream else conn.errorStream
+                if (stream != null) {
+                    val jsonStr = stream.bufferedReader().use { it.readText() }
+                    val obj = JSONObject(jsonStr)
+                    if (obj.optString("status") == "success") {
+                        val query = obj.optString("query")
+                        val countryCode = obj.optString("countryCode")
+                        val country = obj.optString("country")
+                        val city = obj.optString("city")
+                        val flag = countryCodeToEmoji(countryCode)
+                        val ipDisplay = if (flag.isNotEmpty()) "$flag $query" else query
+                        val locDisplay = if (country.isNotEmpty() && city.isNotEmpty()) {
+                            "$country · $city"
+                        } else {
+                            country.ifEmpty { city }
                         }
+                        withContext(Dispatchers.Main) {
+                            ipText.text = ipDisplay
+                            locationText.text = locDisplay
+                            ipContainer.isVisible = true
+                        }
+                        return@launch
+                    }
+                }
+                withContext(Dispatchers.Main) {
+                    if (ipText.text == "... ") {
+                        ipText.text = "—"
+                        locationText.text = context.getString(R.string.connection_test_error, "")
                     }
                 }
             } catch (e: Exception) {
@@ -276,7 +279,6 @@ class StatsBar @JvmOverloads constructor(
                 }
                 withContext(Dispatchers.Main) {
                     if (DataStore.selectedProxy == targetProxyId) {
-                        isEnabled = true
                         setStatus(
                             app.getString(
                                 if (DataStore.connectionTestURL.startsWith("https://")) {
@@ -287,6 +289,7 @@ class StatsBar @JvmOverloads constructor(
                             )
                         )
                     }
+                    isEnabled = true
                 }
 
             } catch (e: Exception) {
@@ -303,7 +306,6 @@ class StatsBar @JvmOverloads constructor(
                 }
                 withContext(Dispatchers.Main) {
                     if (DataStore.selectedProxy == targetProxyId) {
-                        isEnabled = true
                         if (isNotStarted) {
                             setStatus(app.getText(R.string.connecting))
                         } else {
@@ -316,6 +318,7 @@ class StatsBar @JvmOverloads constructor(
                             )
                         }
                     }
+                    isEnabled = true
                 }
             }
         }
